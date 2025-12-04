@@ -14,12 +14,11 @@ import {
   Divider
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard' // Placeholder for Trello logo
-import axios from 'axios'
 import ModeSwitcher from '../components/ModeSwitcher'
 
 function Login() {
   const navigate = useNavigate()
-  const { setAuth } = useAuthStore()
+  const { login, monitorLogin } = useAuthStore()
   const [tab, setTab] = useState(0)
   const [error, setError] = useState('')
   
@@ -38,8 +37,7 @@ function Login() {
   const handleMemberLogin = async (e) => {
     e.preventDefault()
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/login', { email, password })
-      setAuth(res.data.user, res.data.token)
+      await login(email, password)
       navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')
@@ -49,8 +47,7 @@ function Login() {
   const handleMonitorLogin = async (e) => {
     e.preventDefault()
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/monitor-login', { token: monitorToken })
-      setAuth(res.data.user, res.data.token)
+      await monitorLogin(monitorToken)
       navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid token')
@@ -59,9 +56,8 @@ function Login() {
 
   const handleCreateMonitor = async () => {
     try {
-      const res = await axios.post('http://localhost:5001/api/auth/monitor-login', {})
-      setAuth(res.data.user, res.data.token)
-      alert(`Your Monitor Token is: ${res.data.monitorToken}. Save this to login later!`)
+      const res = await monitorLogin()
+      alert(`Your Monitor Token is: ${res.monitorToken}. Save this to login later!`)
       navigate('/dashboard')
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create monitor')

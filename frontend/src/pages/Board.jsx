@@ -1,42 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useBoardStore } from '../stores/useBoardStore'
 import { Box, Typography, Button, CircularProgress } from '@mui/material'
 import List from '../components/List'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import PeopleIcon from '@mui/icons-material/People'
 import FilterListIcon from '@mui/icons-material/FilterList'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
-import axios from 'axios'
 
 function Board() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { token } = useAuthStore()
-  const [board, setBoard] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { currentBoard: board, loading, fetchBoard } = useBoardStore()
 
   useEffect(() => {
     if (!token) {
       navigate('/login')
       return
     }
-    fetchBoard()
-  }, [id, token])
-
-  const fetchBoard = async () => {
-    try {
-      const res = await axios.get(`http://localhost:5001/api/boards/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setBoard(res.data)
-    } catch (err) {
-      console.error(err)
-      // Handle error (e.g. redirect to dashboard if 404 or 403)
-    } finally {
-      setLoading(false)
-    }
-  }
+    fetchBoard(id)
+  }, [id, token, fetchBoard])
 
   if (loading) {
     return (

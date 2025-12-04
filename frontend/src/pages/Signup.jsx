@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAuthStore } from '../stores/useAuthStore'
 import {
   Box,
   Button,
@@ -12,11 +13,11 @@ import {
   Divider
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
-import axios from 'axios'
 import ModeSwitcher from '../components/ModeSwitcher'
 
 function Signup() {
   const navigate = useNavigate()
+  const { signup } = useAuthStore()
   const [formData, setFormData] = useState({
     username: '',
     firstName: '',
@@ -40,7 +41,7 @@ function Signup() {
     }
 
     try {
-      await axios.post('http://localhost:5001/api/auth/signup', {
+      await signup({
         username: formData.username,
         firstName: formData.firstName,
         lastName: formData.lastName,

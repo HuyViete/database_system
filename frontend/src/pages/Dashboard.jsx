@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useBoardStore } from '../stores/useBoardStore'
 import {
   Box,
   Typography,
@@ -19,12 +20,11 @@ import {
 } from '@mui/material'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import AddIcon from '@mui/icons-material/Add'
-import axios from 'axios'
 
 function Dashboard() {
   const navigate = useNavigate()
   const { user, token, signOut } = useAuthStore()
-  const [boards, setBoards] = useState([])
+  const { boards, fetchBoards, createBoard } = useBoardStore()
   const [openNewBoard, setOpenNewBoard] = useState(false)
   const [newBoardName, setNewBoardName] = useState('')
 
@@ -34,29 +34,14 @@ function Dashboard() {
       return
     }
     fetchBoards()
-  }, [token, navigate])
-
-  const fetchBoards = async () => {
-    try {
-      const res = await axios.get('http://localhost:5001/api/boards', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      setBoards(res.data)
-    } catch (err) {
-      console.error(err)
-    }
-  }
+  }, [token, navigate, fetchBoards])
 
   const handleCreateBoard = async () => {
     try {
-      const res = await axios.post('http://localhost:5001/api/boards', 
-        { name: newBoardName, background_color: '#0079bf' }, // Default Trello Blue
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
+      const newBoard = await createBoard({ name: newBoardName, background_color: '#0079bf' })
       setOpenNewBoard(false)
       setNewBoardName('')
-      fetchBoards() // Refresh list
-      navigate(`/board/${res.data.boardId}`)
+      navigate(`/board/${newBoard.boardId}`)
     } catch (err) {
       console.error(err)
     }

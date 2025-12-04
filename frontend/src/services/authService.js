@@ -1,34 +1,19 @@
-import api from '../lib/axios'
+import api from '../libs/axios'
 
-export const authService = {
-  signUp: async (username, password, email, firstName, lastName, exp, role) => {
-    const res = await api.post('/auth/signup', {
-      username,
-      password,
-      email,
-      firstName,
-      lastName,
-      exp,
-      role
-    }, { withCredentials: true })
-    return res.data
+const authService = {
+  login: async (email, password) => {
+    const response = await api.post('/auth/login', { email, password })
+    return response.data
   },
-
-  signIn: async (username, password) => {
-    const res = await api.post('/auth/signin', {
-      username,
-      password
-    }, { withCredentials: true })
-    return res.data
+  signup: async (userData) => {
+    const response = await api.post('/auth/signup', userData)
+    return response.data
   },
-
-  signOut: async () => {
-    const res = await api.post('/auth/signout', {}, { withCredentials: true })
-    return res.data
-  },
-
-  fetchMe: async () => {
-    const res = await api.get('/users/me', { withCredentials: true })
-    return res.data.user
+  monitorLogin: async (token) => {
+    const payload = token ? { token } : {}
+    const response = await api.post('/auth/monitor-login', payload)
+    return response.data
   }
 }
+
+export default authService
