@@ -1,12 +1,14 @@
-const express = require('express');
+import express from "express"
+import { connectDB } from "./libs/db.js";
 const app = express();
 
-// Define a route for the root URL
-app.get('/', (req, res) => {
-res.send('Hello, World!');
-});
+import dotenv from 'dotenv'
+dotenv.config();
 
-// Start the server on port 3000
-app.listen(3000, () => {
-console.log('Server is running on http://localhost:3000');
-});
+const PORT = process.env.PORT || 5001;
+
+connectDB();
+
+app.listen(PORT, () => {
+  console.log(`Server runs at port ${PORT}`)
+})
