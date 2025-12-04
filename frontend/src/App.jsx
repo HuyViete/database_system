@@ -6,6 +6,7 @@ import Signup from './pages/Signup'
 import Board from './pages/Board'
 import Dashboard from './pages/Dashboard'
 import ProtectedRoute from './components/ProtectedRoute'
+import { useAuthStore } from './stores/useAuthStore'
 
 const PageLoader = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -13,12 +14,20 @@ const PageLoader = () => (
   </div>
 )
 
+const RootRedirect = () => {
+  const { accessToken, refreshToken } = useAuthStore()
+  const token = accessToken || localStorage.getItem('accessToken')
+  const refresh = refreshToken || localStorage.getItem('refreshToken')
+  const isAuthenticated = !!token || !!refresh
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
+}
+
 export default function App() {
   return (
     <Router>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path='/' element={<Navigate to="/login" replace />} />
+          <Route path='/' element={<RootRedirect />} />
           <Route path='/login' element={<Login />} />
           <Route path='/signup' element={<Signup />} />
           

@@ -12,16 +12,11 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 function Board() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { token } = useAuthStore()
   const { currentBoard: board, loading, fetchBoard } = useBoardStore()
 
   useEffect(() => {
-    if (!token) {
-      navigate('/login')
-      return
-    }
     fetchBoard(id)
-  }, [id, token, fetchBoard])
+  }, [id, fetchBoard])
 
   if (loading) {
     return (

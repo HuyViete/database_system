@@ -23,25 +23,23 @@ import AddIcon from '@mui/icons-material/Add'
 
 function Dashboard() {
   const navigate = useNavigate()
-  const { user, token, signOut } = useAuthStore()
+  const { user, accessToken, signOut } = useAuthStore()
   const { boards, fetchBoards, createBoard } = useBoardStore()
   const [openNewBoard, setOpenNewBoard] = useState(false)
   const [newBoardName, setNewBoardName] = useState('')
 
   useEffect(() => {
-    if (!token) {
-      navigate('/login')
-      return
-    }
+    // ProtectedRoute handles the redirect, but we can double check
+    // or just rely on the API call failing if token is invalid
     fetchBoards()
-  }, [token, navigate, fetchBoards])
+  }, [fetchBoards])
 
   const handleCreateBoard = async () => {
     try {
       const newBoard = await createBoard({ name: newBoardName, background_color: '#0079bf' })
       setOpenNewBoard(false)
       setNewBoardName('')
-      navigate(`/board/${newBoard.boardId}`)
+      navigate(`/board/${newBoard.board_id}`)
     } catch (err) {
       console.error(err)
     }
