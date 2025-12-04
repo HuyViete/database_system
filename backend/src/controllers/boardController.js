@@ -1,10 +1,10 @@
 import mssql from 'mssql';
+import { pool } from '../libs/db.js';
 
 export const getBoards = async (req, res) => {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     try {
-        const pool = await mssql.connect();
         const result = await pool.request()
             .input('userId', mssql.UniqueIdentifier, userId)
             .query(`
@@ -23,10 +23,10 @@ export const getBoards = async (req, res) => {
 };
 
 export const createBoard = async (req, res) => {
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     const { name, background_color, background_img, workspace_id } = req.body;
     
-    const transaction = new mssql.Transaction();
+    const transaction = new mssql.Transaction(pool);
     
     try {
         await transaction.begin();
@@ -35,8 +35,6 @@ export const createBoard = async (req, res) => {
         
         // If no workspace provided, find or create a default one
         if (!targetWorkspaceId) {
-            const pool = await mssql.connect();
-            
             // Check if user has any workspace
             const wsCheck = await pool.request()
                 .input('userId', mssql.UniqueIdentifier, userId)
@@ -115,7 +113,16 @@ export const createBoard = async (req, res) => {
 
         await transaction.commit();
         
-        res.status(201).json({ message: 'Board created', boardId });
+        const newBoard = {
+            board_id: boardId,
+            workspace_id: targetWorkspaceId,
+            name: name,
+            visibility: 'private',
+            background_color: background_color || '#0079bf',
+            background_img: background_img || null
+        };
+        
+        res.status(201).json(newBoard);
         
     } catch (error) {
         if (transaction._aborted === false) await transaction.rollback();
@@ -126,11 +133,9 @@ export const createBoard = async (req, res) => {
 
 export const getBoard = async (req, res) => {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.user_id;
     
     try {
-        const pool = await mssql.connect();
-        
         // Check access
         const accessCheck = await pool.request()
             .input('boardId', mssql.UniqueIdentifier, id)

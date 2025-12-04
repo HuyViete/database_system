@@ -19,7 +19,7 @@ export const protectedRoute = (req, res, next) => {
         return res.status(403).json({ message: 'Access token invalid' });
       }
 
-      const user = await getUserById(decodedUser.userID);
+      const user = await getUserById(decodedUser.id);
 
       if (!user) {
         return res.status(404).json({ message: 'User not found' })

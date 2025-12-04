@@ -1,17 +1,17 @@
 import mssql from 'mssql';
+import { pool } from '../libs/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
 export const signup = async (req, res) => {
     const { username, firstName, lastName, email, password, birthDate } = req.body;
-    const transaction = new mssql.Transaction();
+    const transaction = new mssql.Transaction(pool);
     
     try {
         await transaction.begin();
         
         // 1. Check if username or email exists (Basic check, DB constraints will also catch this)
-        const pool = await mssql.connect();
         const check = await pool.request()
             .input('username', mssql.VarChar, username)
             .input('email', mssql.VarChar, email)
@@ -79,7 +79,6 @@ export const login = async (req, res) => {
     const ipAddress = req.ip;
     
     try {
-        const pool = await mssql.connect();
         const result = await pool.request()
             .input('email', mssql.VarChar, email)
             .query(`
@@ -152,8 +151,6 @@ export const refreshToken = async (req, res) => {
     if (!refreshToken) return res.status(401).json({ message: 'Refresh Token Required' });
 
     try {
-        const pool = await mssql.connect();
-        
         // Check DB
         const result = await pool.request()
             .input('refreshToken', mssql.VarChar, refreshToken)
@@ -195,31 +192,24 @@ export const logout = async (req, res) => {
     if (!refreshToken) return res.sendStatus(204); // No content
     
     try {
-        const pool = await mssql.connect();
         await pool.request()
             .input('refreshToken', mssql.VarChar, refreshToken)
-            .query(`UPDATE Sessions SET is_revoked = 1 WHERE refresh_token = @refreshToken`);
-            
         res.sendStatus(204);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
     }
 };
-
+    
 export const monitorLogin = async (req, res) => {
     const { token, username } = req.body;
     
     try {
-        const pool = await mssql.connect();
-        
         if (token) {
             // Login existing monitor
             const result = await pool.request()
                 .input('token', mssql.VarChar, token)
                 .query(`
-                    SELECT u.user_id, u.username, m.token
-                    FROM Monitor m
                     JOIN [User] u ON m.monitor_id = u.user_id
                     WHERE m.token = @token
                 `);
@@ -242,13 +232,10 @@ export const monitorLogin = async (req, res) => {
             });
         } else {
             // Create new monitor
-            const transaction = new mssql.Transaction();
+            const transaction = new mssql.Transaction(pool);
             await transaction.begin();
             
             try {
-                const generatedUsername = username || `Monitor_${Math.floor(Math.random() * 100000)}`;
-                const generatedToken = crypto.randomBytes(16).toString('hex');
-                
                 // Insert User
                 const userRequest = new mssql.Request(transaction);
                 const userResult = await userRequest

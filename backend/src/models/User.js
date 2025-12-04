@@ -1,26 +1,23 @@
 import { pool } from "../libs/db.js"
+import mssql from 'mssql'
 
 export async function getUserByUsername(username) {
-  const [rows] = await pool.query(`
-    SELECT *
-    from Users
-    WHERE username = ?
-    `, [username])
-  return rows[0]
+  const result = await pool.request()
+    .input('username', mssql.VarChar, username)
+    .query(`SELECT * FROM [User] WHERE username = @username`)
+  return result.recordset[0]
 }
 
-export async function createUser(username, password, email, firstName, lastName, exp, role) {
-  await pool.query(`
-    INSERT INTO Users (username, password, email, firstname, lastname, exp_year, role)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [username, password, email, firstName, lastName, exp, role])
-}
+// createUser is handled in authController with transaction
+// export async function createUser(...) { ... }
 
 export async function getUserById(userId) {
-  const [rows] = await pool.query(`SELECT * FROM Users WHERE user_id = ?`, [userId])
-  return rows[0]
+  const result = await pool.request()
+    .input('userId', mssql.UniqueIdentifier, userId)
+    .query(`SELECT * FROM [User] WHERE user_id = @userId`)
+  return result.recordset[0]
 }
 
-export async function updateUserWarehouse(userId, warehouseId) {
-  await pool.query(`UPDATE Users SET warehouse_id = ? WHERE user_id = ?`, [warehouseId, userId])
-}
+// updateUserWarehouse is not applicable to current schema
+// export async function updateUserWarehouse(...) { ... }
+
