@@ -12,7 +12,8 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 function Board() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { currentBoard: board, loading, fetchBoard } = useBoardStore()
+  // const {  }
+  const { currentBoard: board, loading, error, fetchBoard } = useBoardStore()
 
   useEffect(() => {
     fetchBoard(id)
@@ -22,6 +23,17 @@ function Board() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'trello.boardBg' }}>
         <CircularProgress sx={{ color: 'white' }} />
+      </Box>
+    )
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'background.default', color: 'white' }}>
+        <Typography variant="h5" sx={{ color: 'trello.textMain' }}>{error === 'Request failed with status code 403' ? 'Unauthorized Access' : error}</Typography>
+        <Button 
+          onClick={() => navigate('/')}
+          variant='contained'>Return ?</Button>
       </Box>
     )
   }
@@ -78,6 +90,11 @@ function Board() {
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button 
+            onClick={() => navigate('/dashboard')}
+            sx={{ color: 'common.white', '&:hover': { backgroundColor: 'trello.boardButtonHover' } }}>
+            Back to boards
+          </Button>
           <Button startIcon={<FilterListIcon />} sx={{ color: 'common.white', textTransform: 'none', '&:hover': { backgroundColor: 'trello.boardButtonHover' } }}>
             Filter
           </Button>
@@ -115,7 +132,7 @@ function Board() {
         }}
       >
         {board.lists && board.lists.map((list) => (
-          <List key={list.list_id} title={list.name} cards={list.cards} />
+          <List key={list.list_id} listId={list.list_id} title={list.name} cards={list.cards} />
         ))}
 
         {/* Add List Button */}

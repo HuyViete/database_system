@@ -40,5 +40,23 @@ export const useBoardStore = create((set) => ({
     } catch (error) {
       set({ error: error.message, loading: false })
     }
+  },
+
+  createCard: async (listId, name) => {
+    try {
+      const newCard = await boardService.createCard({ listId, name })
+      set((state) => {
+        if (!state.currentBoard) return state
+        const newLists = state.currentBoard.lists.map((list) => {
+          if (list.list_id === listId) {
+            return { ...list, cards: [...list.cards, newCard] }
+          }
+          return list
+        })
+        return { currentBoard: { ...state.currentBoard, lists: newLists } }
+      })
+    } catch (error) {
+      console.error(error)
+    }
   }
 }))

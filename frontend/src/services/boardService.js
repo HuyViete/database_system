@@ -12,6 +12,10 @@ const boardService = {
   getBoard: async (id) => {
     const response = await api.get(`/boards/${id}`)
     return response.data
+  },
+  createCard: async (cardData) => {
+    const response = await api.post('/cards', cardData)
+    return response.data
   }
 }
 

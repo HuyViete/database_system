@@ -1,9 +1,23 @@
-import { Box, Typography, IconButton, Button } from '@mui/material'
+import { useState } from 'react'
+import { Box, Typography, IconButton, Button, TextField } from '@mui/material'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import AddIcon from '@mui/icons-material/Add'
+import CloseIcon from '@mui/icons-material/Close'
 import Card from './Card'
+import { useBoardStore } from '../stores/useBoardStore'
 
-function List({ title, cards = [] }) {
+function List({ listId, title, cards = [] }) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [newCardTitle, setNewCardTitle] = useState('')
+  const { createCard } = useBoardStore()
+
+  const handleCreateCard = async () => {
+    if (!newCardTitle.trim()) return
+    await createCard(listId, newCardTitle)
+    setNewCardTitle('')
+    setIsAdding(false)
+  }
+
   return (
     <Box
       sx={{
@@ -80,23 +94,72 @@ function List({ title, cards = [] }) {
         ))}
       </Box>
 
-      {/* Add Card Button */}
-      <Button
-        startIcon={<AddIcon />}
-        sx={{
-          justifyContent: 'flex-start',
-          color: 'trello.textSecondary',
-          textTransform: 'none',
-          fontWeight: 400,
-          borderRadius: '8px',
-          '&:hover': {
-            backgroundColor: 'action.hover',
-            color: 'trello.textMain'
-          }
-        }}
-      >
-        Add a card
-      </Button>
+      {/* Add Card Section */}
+      {isAdding ? (
+        <Box sx={{ px: 0.5 }}>
+          <TextField
+            fullWidth
+            multiline
+            autoFocus
+            placeholder="Enter a title for this card..."
+            value={newCardTitle}
+            onChange={(e) => setNewCardTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleCreateCard()
+              }
+            }}
+            sx={{
+              bgcolor: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 1px 0 rgba(9,30,66,.25)',
+              mb: 1,
+              '& .MuiOutlinedInput-root': {
+                padding: '8px 12px',
+                '& fieldset': { border: 'none' },
+                '&:hover fieldset': { border: 'none' },
+                '&.Mui-focused fieldset': { border: 'none' }
+              }
+            }}
+          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Button
+              variant="contained"
+              onClick={handleCreateCard}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 500,
+                boxShadow: 'none',
+                '&:hover': { boxShadow: 'none' }
+              }}
+            >
+              Add card
+            </Button>
+            <IconButton size="small" onClick={() => setIsAdding(false)} sx={{ color: 'trello.textSecondary' }}>
+              <CloseIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
+      ) : (
+        <Button
+          startIcon={<AddIcon />}
+          onClick={() => setIsAdding(true)}
+          sx={{
+            justifyContent: 'flex-start',
+            color: 'trello.textSecondary',
+            textTransform: 'none',
+            fontWeight: 400,
+            borderRadius: '8px',
+            '&:hover': {
+              backgroundColor: 'action.hover',
+              color: 'trello.textMain'
+            }
+          }}
+        >
+          Add a card
+        </Button>
+      )}
     </Box>
   )
 }

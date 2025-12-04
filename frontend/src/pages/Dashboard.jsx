@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useBoardStore } from '../stores/useBoardStore'
 import {
@@ -54,15 +54,21 @@ function Dashboard() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* App Bar */}
       <AppBar position="static" sx={{ bgcolor: 'trello.appBar' }}>
-        <Toolbar variant="dense">
-          <DashboardIcon sx={{ mr: 1 }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-            Brello
-          </Typography>
-          <Typography variant="body2" sx={{ mr: 2 }}>
+        <Toolbar variant="dense" sx={{ display: 'flex', justifyContent: 'space-between' }}>
+          <Button 
+            sx={{ display: 'flex', alignItems: 'center', color: 'white' }}
+            onClick={() => navigate('/')}>
+            <DashboardIcon sx={{ mr: 1 }} />
+            <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
+              Brello
+            </Typography>
+          </Button>
+          <Box sx={{ display: 'flex', alignItems: 'center'}}>
+            <Typography variant="body2" sx={{ mr: 2 }}>
             {user?.username}
-          </Typography>
-          <Button color="inherit" onClick={handleLogout} size="small">Logout</Button>
+            </Typography>
+            <Button color="inherit" onClick={handleLogout} size="small">Logout</Button>
+          </Box>
         </Toolbar>
       </AppBar>
 

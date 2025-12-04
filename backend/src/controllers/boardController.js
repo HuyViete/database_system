@@ -8,10 +8,13 @@ export const getBoards = async (req, res) => {
         const result = await pool.request()
             .input('userId', mssql.UniqueIdentifier, userId)
             .query(`
-                SELECT b.* 
+                SELECT DISTINCT b.* 
                 FROM Board b
-                JOIN Board_Member bm ON b.board_id = bm.board_id
-                WHERE bm.member_id = @userId
+                LEFT JOIN Board_Member bm ON b.board_id = bm.board_id
+                LEFT JOIN Workspace_Member wm ON b.workspace_id = wm.workspace_id
+                WHERE 
+                    bm.member_id = @userId 
+                    OR (wm.member_id = @userId AND b.visibility = 'workspace')
                 ORDER BY b.time_updated DESC
             `);
             

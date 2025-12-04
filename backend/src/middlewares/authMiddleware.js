@@ -16,7 +16,7 @@ export const protectedRoute = (req, res, next) => {
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, async (err, decodedUser) => {
       if (err) {
         console.error(err);
-        return res.status(403).json({ message: 'Access token invalid' });
+        return res.status(401).json({ message: 'Access token invalid' });
       }
 
       const user = await getUserById(decodedUser.id);
