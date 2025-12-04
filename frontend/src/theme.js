@@ -36,7 +36,16 @@ const theme = extendTheme({
           border: '#091e4240',
           inputBg: '#FAFBFC',
           inputBorder: '#DFE1E6',
-          inputBorderHover: '#A6C5E2'
+          inputBorderHover: '#A6C5E2',
+          // Board specific colors (transparent overlays)
+          boardHeaderBg: 'rgba(0,0,0,0.15)',
+          boardButtonHover: 'rgba(255,255,255,0.2)',
+          boardButtonActive: 'rgba(255,255,255,0.3)',
+          boardListAddBg: 'rgba(255,255,255,0.24)',
+          boardListAddHover: 'rgba(255,255,255,0.32)',
+          scrollTrack: 'rgba(0,0,0,0.15)',
+          scrollThumb: 'rgba(255,255,255,0.4)',
+          scrollThumbHover: 'rgba(255,255,255,0.6)'
         }
       }
     },
@@ -67,7 +76,16 @@ const theme = extendTheme({
           border: '#738496',
           inputBg: '#22272B',
           inputBorder: '#738496',
-          inputBorderHover: '#8590A2'
+          inputBorderHover: '#8590A2',
+          // Board specific colors (transparent overlays)
+          boardHeaderBg: 'rgba(0,0,0,0.15)',
+          boardButtonHover: 'rgba(255,255,255,0.2)',
+          boardButtonActive: 'rgba(255,255,255,0.3)',
+          boardListAddBg: 'rgba(255,255,255,0.24)',
+          boardListAddHover: 'rgba(255,255,255,0.32)',
+          scrollTrack: 'rgba(0,0,0,0.15)',
+          scrollThumb: 'rgba(255,255,255,0.4)',
+          scrollThumbHover: 'rgba(255,255,255,0.6)'
         }
       }
     }

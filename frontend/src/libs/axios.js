@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { useAuthStore } from '../stores/useAuthStore'
+import authService from '../services/authService'
 
 const api = axios.create({
   baseURL:
@@ -16,5 +17,38 @@ api.interceptors.request.use((config) => {
 
   return config
 })
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+      
+      try {
+        const { refreshToken, setAccessToken, signOut } = useAuthStore.getState()
+        
+        if (!refreshToken) {
+          signOut()
+          return Promise.reject(error)
+        }
+
+        const res = await authService.refreshToken(refreshToken)
+        const newAccessToken = res.accessToken
+        
+        setAccessToken(newAccessToken)
+        
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        return api(originalRequest)
+      } catch (refreshError) {
+        useAuthStore.getState().signOut()
+        return Promise.reject(refreshError)
+      }
+    }
+    
+    return Promise.reject(error)
+  }
+)
 
 export default api

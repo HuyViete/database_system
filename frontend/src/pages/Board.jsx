@@ -64,29 +64,29 @@ function Board() {
           gap: 2,
           flexWrap: 'wrap',
           backdropFilter: 'blur(4px)',
-          backgroundColor: 'rgba(0,0,0,0.15)',
-          color: 'white'
+          backgroundColor: 'trello.boardHeaderBg',
+          color: 'common.white'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 1, px: 1 } }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1.1rem', cursor: 'pointer', '&:hover': { backgroundColor: 'trello.boardButtonHover', borderRadius: 1, px: 1 } }}>
             {board.name}
           </Typography>
-          <Button startIcon={<StarBorderIcon />} sx={{ color: 'white', minWidth: 'auto', px: 1, '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' } }} />
-          <Box sx={{ height: '16px', width: '1px', backgroundColor: 'rgba(255,255,255,0.3)', mx: 1 }} />
-          <Button startIcon={<PeopleIcon />} sx={{ color: 'white', textTransform: 'none', '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' } }}>
+          <Button startIcon={<StarBorderIcon />} sx={{ color: 'common.white', minWidth: 'auto', px: 1, '&:hover': { backgroundColor: 'trello.boardButtonHover' } }} />
+          <Box sx={{ height: '16px', width: '1px', backgroundColor: 'trello.boardButtonActive', mx: 1 }} />
+          <Button startIcon={<PeopleIcon />} sx={{ color: 'common.white', textTransform: 'none', '&:hover': { backgroundColor: 'trello.boardButtonHover' } }}>
             {board.visibility || 'Workspace Visible'}
           </Button>
-          <Button sx={{ color: 'white', textTransform: 'none', backgroundColor: 'rgba(255,255,255,0.2)', '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' } }}>
+          <Button sx={{ color: 'common.white', textTransform: 'none', backgroundColor: 'trello.boardButtonHover', '&:hover': { backgroundColor: 'trello.boardButtonActive' } }}>
             Board
           </Button>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Button startIcon={<FilterListIcon />} sx={{ color: 'white', textTransform: 'none', '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' } }}>
+          <Button startIcon={<FilterListIcon />} sx={{ color: 'common.white', textTransform: 'none', '&:hover': { backgroundColor: 'trello.boardButtonHover' } }}>
             Filter
           </Button>
-          <Button startIcon={<MoreHorizIcon />} sx={{ color: 'white', textTransform: 'none', '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' } }}>
+          <Button startIcon={<MoreHorizIcon />} sx={{ color: 'common.white', textTransform: 'none', '&:hover': { backgroundColor: 'trello.boardButtonHover' } }}>
             Show Menu
           </Button>
         </Box>
@@ -106,16 +106,16 @@ function Board() {
             width: '12px'
           },
           '&::-webkit-scrollbar-track': {
-            backgroundColor: 'rgba(0,0,0,0.15)',
+            backgroundColor: 'trello.scrollTrack',
             borderRadius: '10px',
             margin: '8px'
           },
           '&::-webkit-scrollbar-thumb': {
-            backgroundColor: 'rgba(255,255,255,0.4)',
+            backgroundColor: 'trello.scrollThumb',
             borderRadius: '10px'
           },
           '&::-webkit-scrollbar-thumb:hover': {
-            backgroundColor: 'rgba(255,255,255,0.6)'
+            backgroundColor: 'trello.scrollThumbHover'
           }
         }}
       >
@@ -128,17 +128,17 @@ function Board() {
           sx={{
             minWidth: '272px',
             maxWidth: '272px',
-            backgroundColor: 'rgba(255,255,255,0.24)',
+            backgroundColor: 'trello.boardListAddBg',
             borderRadius: '12px',
             p: 1.5,
-            color: 'white',
+            color: 'common.white',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 1,
             transition: 'background-color 0.2s',
             '&:hover': {
-              backgroundColor: 'rgba(255,255,255,0.32)'
+              backgroundColor: 'trello.boardListAddHover'
             }
           }}
         >

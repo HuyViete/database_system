@@ -13,6 +13,13 @@ const authService = {
     const payload = token ? { token } : {}
     const response = await api.post('/auth/monitor-login', payload)
     return response.data
+  },
+  refreshToken: async (refreshToken) => {
+    const response = await api.post('/auth/refresh-token', { refreshToken })
+    return response.data
+  },
+  logout: async (refreshToken) => {
+    return await api.post('/auth/logout', { refreshToken })
   }
 }
 

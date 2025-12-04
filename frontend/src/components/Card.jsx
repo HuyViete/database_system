@@ -7,13 +7,13 @@ function Card({ title, labels = [], members = [] }) {
     <Paper
       sx={{
         backgroundColor: 'trello.cardBg',
-        boxShadow: (theme) => `0px 1px 1px ${theme.vars.palette.trello.border}`,
+        boxShadow: `0px 1px 1px ${theme.vars.palette.trello.border}`,
         borderRadius: '8px',
         padding: '8px 12px',
         cursor: 'pointer',
         '&:hover': {
           backgroundColor: 'trello.cardHover', // Slight darken on hover
-          border: (theme) => `1px solid ${theme.vars.palette.trello.border}` // Optional: add border or just change bg
+          border: `1px solid ${theme.vars.palette.trello.border}` // Optional: add border or just change bg
         },
         marginBottom: 1,
         position: 'relative',
@@ -67,7 +67,7 @@ function Card({ title, labels = [], members = [] }) {
                 fontSize: '10px',
                 color: 'trello.textMain',
                 ml: -0.5,
-                border: (theme) => `2px solid ${theme.vars.palette.trello.cardBg}`
+                border: `2px solid ${theme.vars.palette.trello.cardBg}`
               }}
             >
               {member.initials}

@@ -1,21 +1,24 @@
 import { create } from 'zustand'
 import authService from '../services/authService'
 
-export const useAuthStore = create((set) => ({
+export const useAuthStore = create((set, get) => ({
   user: JSON.parse(localStorage.getItem('user')) || null,
-  token: localStorage.getItem('token') || null,
+  accessToken: localStorage.getItem('accessToken') || null,
+  refreshToken: localStorage.getItem('refreshToken') || null,
   
-  setAuth: (user, token) => {
+  setAuth: (user, accessToken, refreshToken) => {
     localStorage.setItem('user', JSON.stringify(user))
-    localStorage.setItem('token', token)
-    set({ user, token })
+    localStorage.setItem('accessToken', accessToken)
+    if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
+    set({ user, accessToken, refreshToken: refreshToken || get().refreshToken })
   },
 
   login: async (email, password) => {
     const data = await authService.login(email, password)
     localStorage.setItem('user', JSON.stringify(data.user))
-    localStorage.setItem('token', data.token)
-    set({ user: data.user, token: data.token })
+    localStorage.setItem('accessToken', data.accessToken)
+    localStorage.setItem('refreshToken', data.refreshToken)
+    set({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken })
     return data
   },
 
@@ -26,14 +29,28 @@ export const useAuthStore = create((set) => ({
   monitorLogin: async (token) => {
     const data = await authService.monitorLogin(token)
     localStorage.setItem('user', JSON.stringify(data.user))
-    localStorage.setItem('token', data.token)
-    set({ user: data.user, token: data.token })
+    localStorage.setItem('accessToken', data.token)
+    set({ user: data.user, accessToken: data.token })
     return data
   },
   
-  signOut: () => {
+  signOut: async () => {
+    const refreshToken = get().refreshToken
+    if (refreshToken) {
+      try {
+        await authService.logout(refreshToken)
+      } catch (e) {
+        console.error(e)
+      }
+    }
     localStorage.removeItem('user')
-    localStorage.removeItem('token')
-    set({ user: null, token: null })
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+    set({ user: null, accessToken: null, refreshToken: null })
+  },
+
+  setAccessToken: (token) => {
+    localStorage.setItem('accessToken', token)
+    set({ accessToken: token })
   }
 }))

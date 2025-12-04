@@ -213,7 +213,7 @@ function Login() {
         
         <Box sx={{ mt: 4, textAlign: 'center' }}>
            <Typography variant="caption" color="text.secondary">
-             Brello • A Database System Project
+             Brello • BK Trello
            </Typography>
         </Box>
       </Container>

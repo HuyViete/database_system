@@ -114,7 +114,7 @@ function Signup() {
 
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   required
                   fullWidth
@@ -126,7 +126,7 @@ function Signup() {
                   placeholder="e.g. John"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12}>
                 <TextField
                   required
                   fullWidth
@@ -227,7 +227,7 @@ function Signup() {
         
         <Box sx={{ mt: 4, textAlign: 'center' }}>
            <Typography variant="caption" color="text.secondary">
-             Brello • A Database System Project
+             Brello • BK Trello
            </Typography>
         </Box>
       </Container>

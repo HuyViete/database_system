@@ -75,6 +75,8 @@ export const signup = async (req, res) => {
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
+    const userAgent = req.headers['user-agent'];
+    const ipAddress = req.ip;
     
     try {
         const pool = await mssql.connect();
@@ -99,10 +101,37 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
         
-        const token = jwt.sign({ id: user.user_id, type: 'member' }, process.env.JWT_SECRET || 'secret', { expiresIn: '1d' });
+        // Generate Tokens
+        const accessToken = jwt.sign(
+            { id: user.user_id, type: 'member' }, 
+            process.env.ACCESS_TOKEN_SECRET || 'access_secret', 
+            { expiresIn: '15m' }
+        );
+        
+        const refreshToken = jwt.sign(
+            { id: user.user_id, type: 'member' }, 
+            process.env.REFRESH_TOKEN_SECRET || 'refresh_secret', 
+            { expiresIn: '7d' }
+        );
+        
+        // Store Session
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 7);
+        
+        await pool.request()
+            .input('userId', mssql.UniqueIdentifier, user.user_id)
+            .input('refreshToken', mssql.VarChar, refreshToken)
+            .input('userAgent', mssql.NVarChar, userAgent)
+            .input('ipAddress', mssql.VarChar, ipAddress)
+            .input('expiresAt', mssql.DateTime2, expiresAt)
+            .query(`
+                INSERT INTO Sessions (user_id, refresh_token, user_agent, ip_address, expires_at)
+                VALUES (@userId, @refreshToken, @userAgent, @ipAddress, @expiresAt)
+            `);
         
         res.json({ 
-            token, 
+            accessToken, 
+            refreshToken,
             user: { 
                 id: user.user_id, 
                 username: user.username, 
@@ -112,6 +141,66 @@ export const login = async (req, res) => {
             } 
         });
         
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const refreshToken = async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(401).json({ message: 'Refresh Token Required' });
+
+    try {
+        const pool = await mssql.connect();
+        
+        // Check DB
+        const result = await pool.request()
+            .input('refreshToken', mssql.VarChar, refreshToken)
+            .query(`
+                SELECT * FROM Sessions 
+                WHERE refresh_token = @refreshToken 
+                AND is_revoked = 0 
+                AND expires_at > GETDATE()
+            `);
+            
+        if (result.recordset.length === 0) {
+            return res.status(403).json({ message: 'Invalid or Expired Refresh Token' });
+        }
+        
+        const session = result.recordset[0];
+        
+        // Verify JWT
+        jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || 'refresh_secret', (err, decoded) => {
+            if (err) return res.status(403).json({ message: 'Invalid Token Signature' });
+            
+            // Generate new Access Token
+            const accessToken = jwt.sign(
+                { id: decoded.id, type: decoded.type }, 
+                process.env.ACCESS_TOKEN_SECRET || 'access_secret', 
+                { expiresIn: '15m' }
+            );
+            
+            res.json({ accessToken });
+        });
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+export const logout = async (req, res) => {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.sendStatus(204); // No content
+    
+    try {
+        const pool = await mssql.connect();
+        await pool.request()
+            .input('refreshToken', mssql.VarChar, refreshToken)
+            .query(`UPDATE Sessions SET is_revoked = 1 WHERE refresh_token = @refreshToken`);
+            
+        res.sendStatus(204);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });

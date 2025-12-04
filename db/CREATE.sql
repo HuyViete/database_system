@@ -77,6 +77,20 @@ CREATE TABLE Monitor (
 );
 GO
 
+-- Bảng Sessions (Quản lý phiên đăng nhập)
+CREATE TABLE Sessions (
+    session_id UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    user_id UNIQUEIDENTIFIER NOT NULL,
+    refresh_token VARCHAR(500) NOT NULL, -- Token dài
+    user_agent NVARCHAR(255), -- Thông tin thiết bị/trình duyệt
+    ip_address VARCHAR(45), -- IPv4 hoặc IPv6
+    expires_at DATETIME2 NOT NULL,
+    created_at DATETIME2 DEFAULT GETDATE(),
+    is_revoked BIT DEFAULT 0, -- Đánh dấu token đã bị hủy
+    FOREIGN KEY (user_id) REFERENCES [User](user_id) ON DELETE CASCADE
+);
+GO
+
 /* =============================================
    2. WORKSPACE & ORGANIZATION
    ============================================= */
