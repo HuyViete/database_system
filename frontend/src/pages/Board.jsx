@@ -11,6 +11,7 @@ import FilterListIcon from '@mui/icons-material/FilterList'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 
 function Board() {
   const { id } = useParams()
@@ -185,6 +186,13 @@ function Board() {
         minHeight: '48px'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button 
+            startIcon={<ArrowBackIcon />} 
+            sx={{ color: 'white', minWidth: 'auto' }} 
+            onClick={() => navigate('/')}
+          >
+            Back
+          </Button>
           {isEditingTitle ? (
             <TextField
               value={boardTitle}
