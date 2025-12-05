@@ -198,3 +198,29 @@ export const getBoard = async (req, res) => {
         res.status(500).json({ message: 'Error fetching board details' });
     }
 };
+
+export const updateBoard = async (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    
+    try {
+        const result = await pool.request()
+            .input('boardId', mssql.UniqueIdentifier, id)
+            .input('name', mssql.NVarChar, name)
+            .query(`
+                UPDATE Board
+                SET name = @name, time_updated = GETDATE()
+                OUTPUT INSERTED.*
+                WHERE board_id = @boardId
+            `);
+            
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ message: 'Board not found' });
+        }
+        
+        res.json(result.recordset[0]);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error updating board' });
+    }
+};

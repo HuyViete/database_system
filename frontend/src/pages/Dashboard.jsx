@@ -64,9 +64,9 @@ function Dashboard() {
             </Typography>
           </Button>
           <Box sx={{ display: 'flex', alignItems: 'center'}}>
-            <Typography variant="body2" sx={{ mr: 2 }}>
+            <Button color='inherit' sx={{ mr: 2 }}>
             {user?.username}
-            </Typography>
+            </Button>
             <Button color="inherit" onClick={handleLogout} size="small">Logout</Button>
           </Box>
         </Toolbar>

@@ -4,6 +4,7 @@ import { connectDB } from "./libs/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import boardRoutes from "./routes/boardRoutes.js";
 import cardRoutes from "./routes/cardRoutes.js";
+import listRoutes from "./routes/listRoutes.js";
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -27,6 +28,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/cards', cardRoutes);
+app.use('/api/lists', listRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server runs at port ${PORT}`)
