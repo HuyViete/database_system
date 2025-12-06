@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import boardRoutes from "./routes/boardRoutes.js";
 import cardRoutes from "./routes/cardRoutes.js";
 import listRoutes from "./routes/listRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/boards', boardRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/lists', listRoutes);
+app.use('/api/comments', commentRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server runs at port ${PORT}`)

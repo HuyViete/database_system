@@ -7,7 +7,7 @@ import Card from './Card'
 import { useBoardStore } from '../stores/useBoardStore'
 import { Droppable, Draggable } from '@hello-pangea/dnd'
 
-function List({ list, index }) {
+function List({ list, index, onCardClick }) {
   const { list_id: listId, name: title, cards = [] } = list
   const [isAdding, setIsAdding] = useState(false)
   const [newCardTitle, setNewCardTitle] = useState('')
@@ -165,6 +165,7 @@ function List({ list, index }) {
                     key={card.card_id || card.id} 
                     card={card}
                     index={index}
+                    onClick={() => onCardClick(card)}
                   />
                 ))}
                 {provided.placeholder}

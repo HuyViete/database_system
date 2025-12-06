@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useBoardStore } from '../stores/useBoardStore'
-import { Box, Typography, Button, CircularProgress, TextField } from '@mui/material'
+import AppHeader from '../components/AppHeader'
+import { Box, Typography, Button, CircularProgress, TextField, AvatarGroup } from '@mui/material'
 import { DragDropContext, Droppable } from '@hello-pangea/dnd'
 import List from '../components/List'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
@@ -12,6 +13,8 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import BoardMenu from '../components/BoardMenu'
+import CardDetailModal from '../components/CardDetailModal'
 
 function Board() {
   const { id } = useParams()
@@ -22,6 +25,9 @@ function Board() {
   const [boardTitle, setBoardTitle] = useState('')
   const [isAddingList, setIsAddingList] = useState(false)
   const [newListTitle, setNewListTitle] = useState('')
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [selectedCard, setSelectedCard] = useState(null)
+  const [selectedList, setSelectedList] = useState(null)
 
   useEffect(() => {
     fetchBoard(id)
@@ -171,7 +177,17 @@ function Board() {
     
       {/* Board Canvas */}
   return (
-    <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'trello.boardBg' }}>
+    <Box sx={{ 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column', 
+      bgcolor: board?.background_color || 'trello.boardBg',
+      backgroundImage: board?.background_img ? `url(${board.background_img})` : 'none',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      transition: 'background 0.3s ease'
+    }}>
+      <AppHeader />
       {/* Board Bar */}
       <Box sx={{
         width: '100%',
@@ -241,11 +257,24 @@ function Board() {
           </Box>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button startIcon={<MoreHorizIcon />} sx={{ color: 'white' }}>
+          <AvatarGroup>
+            
+          </AvatarGroup>
+          <Button 
+            startIcon={<MoreHorizIcon />} 
+            sx={{ color: 'white' }}
+            onClick={() => setIsMenuOpen(true)}
+          >
             Show Menu
           </Button>
         </Box>
       </Box>
+
+      <BoardMenu 
+        open={isMenuOpen} 
+        onClose={() => setIsMenuOpen(false)} 
+        board={board} 
+      />
 
       {/* Board Canvas */}
       <DragDropContext onDragEnd={onDragEnd}>
@@ -280,7 +309,15 @@ function Board() {
               }}
             >
               {board.lists && board.lists.map((list, index) => (
-                <List key={list.list_id} list={list} index={index} />
+                <List 
+                  key={list.list_id} 
+                  list={list} 
+                  index={index} 
+                  onCardClick={(card) => {
+                    setSelectedCard(card)
+                    setSelectedList(list)
+                  }}
+                />
               ))}
               {provided.placeholder}
 
@@ -352,6 +389,19 @@ function Board() {
           )}
         </Droppable>
       </DragDropContext>
+
+      <BoardMenu 
+        open={isMenuOpen} 
+        onClose={() => setIsMenuOpen(false)} 
+        board={board} 
+      />
+
+      <CardDetailModal
+        open={!!selectedCard}
+        onClose={() => setSelectedCard(null)}
+        card={selectedCard}
+        listName={selectedList?.name}
+      />
     </Box>
   )
 }

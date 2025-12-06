@@ -54,7 +54,7 @@ export const createBoard = async (req, res) => {
                 // Create a new default workspace
                 const wsRequest = new mssql.Request(transaction);
                 const wsResult = await wsRequest
-                    .input('name', mssql.NVarChar, 'My Workspace')
+                    .input('name', mssql.NVarChar, 'Trello Workspace')
                     .input('visibility', mssql.VarChar, 'private')
                     .query(`
                         INSERT INTO Workspace (name, visibility)
@@ -201,18 +201,48 @@ export const getBoard = async (req, res) => {
 
 export const updateBoard = async (req, res) => {
     const { id } = req.params;
-    const { name } = req.body;
+    const { name, visibility, background_color, background_img } = req.body;
     
     try {
-        const result = await pool.request()
-            .input('boardId', mssql.UniqueIdentifier, id)
-            .input('name', mssql.NVarChar, name)
-            .query(`
-                UPDATE Board
-                SET name = @name, time_updated = GETDATE()
-                OUTPUT INSERTED.*
-                WHERE board_id = @boardId
-            `);
+        const request = pool.request()
+            .input('boardId', mssql.UniqueIdentifier, id);
+            
+        let updateFields = [];
+        
+        if (name) {
+            request.input('name', mssql.NVarChar, name);
+            updateFields.push("name = @name");
+        }
+        
+        if (visibility) {
+            request.input('visibility', mssql.VarChar, visibility);
+            updateFields.push("visibility = @visibility");
+        }
+        
+        if (background_color) {
+            request.input('backgroundColor', mssql.VarChar, background_color);
+            updateFields.push("background_color = @backgroundColor");
+        }
+        
+        if (background_img !== undefined) { // Allow null/empty string to clear it
+            request.input('backgroundImg', mssql.VarChar, background_img);
+            updateFields.push("background_img = @backgroundImg");
+        }
+        
+        if (updateFields.length === 0) {
+             return res.status(400).json({ message: 'No fields to update' });
+        }
+        
+        updateFields.push("time_updated = GETDATE()");
+        
+        const query = `
+            UPDATE Board
+            SET ${updateFields.join(', ')}
+            OUTPUT INSERTED.*
+            WHERE board_id = @boardId
+        `;
+        
+        const result = await request.query(query);
             
         if (result.recordset.length === 0) {
             return res.status(404).json({ message: 'Board not found' });
@@ -222,5 +252,104 @@ export const updateBoard = async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error updating board' });
+    }
+};
+
+export const getWorkspace = async (req, res) => {
+    const userId = req.user.user_id;
+    
+    try {
+        const result = await pool.request()
+            .input('userId', mssql.UniqueIdentifier, userId)
+            .query(`
+                SELECT TOP 1 w.* 
+                FROM Workspace w
+                JOIN Workspace_Member wm ON w.workspace_id = wm.workspace_id
+                WHERE wm.member_id = @userId
+            `);
+            
+        if (result.recordset.length > 0) {
+            const workspace = result.recordset[0];
+            
+            res.json(workspace);
+        } else {
+             // If no workspace found, create a default one "Trello Workspace"
+             const transaction = new mssql.Transaction(pool);
+             await transaction.begin();
+             
+             try {
+                const wsRequest = new mssql.Request(transaction);
+                const wsResult = await wsRequest
+                    .input('name', mssql.NVarChar, 'Trello Workspace')
+                    .input('visibility', mssql.VarChar, 'private')
+                    .query(`
+                        INSERT INTO Workspace (name, visibility)
+                        OUTPUT INSERTED.*
+                        VALUES (@name, @visibility)
+                    `);
+                
+                const newWorkspace = wsResult.recordset[0];
+                
+                const wmRequest = new mssql.Request(transaction);
+                await wmRequest
+                    .input('workspaceId', mssql.UniqueIdentifier, newWorkspace.workspace_id)
+                    .input('memberId', mssql.UniqueIdentifier, userId)
+                    .input('role', mssql.VarChar, 'Admin')
+                    .query(`
+                        INSERT INTO Workspace_Member (workspace_id, member_id, role)
+                        VALUES (@workspaceId, @memberId, @role)
+                    `);
+                    
+                await transaction.commit();
+                res.json(newWorkspace);
+             } catch (err) {
+                 await transaction.rollback();
+                 console.error(`[getWorkspace] Failed to create default workspace:`, err);
+                 throw err;
+             }
+        }
+    } catch (error) {
+        console.error('[getWorkspace] Error:', error);
+        res.status(500).json({ message: 'Error fetching workspace' });
+    }
+};
+
+export const updateWorkspace = async (req, res) => {
+    const { id } = req.params;
+    const { name } = req.body;
+    const userId = req.user.user_id;
+
+    try {
+        // Verify user is a member of the workspace (and ideally admin, but for now just member)
+        const checkMember = await pool.request()
+            .input('workspaceId', mssql.UniqueIdentifier, id)
+            .input('userId', mssql.UniqueIdentifier, userId)
+            .query(`
+                SELECT 1 FROM Workspace_Member 
+                WHERE workspace_id = @workspaceId AND member_id = @userId
+            `);
+
+        if (checkMember.recordset.length === 0) {
+            return res.status(403).json({ message: 'Not authorized to update this workspace' });
+        }
+
+        const result = await pool.request()
+            .input('workspaceId', mssql.UniqueIdentifier, id)
+            .input('name', mssql.NVarChar, name)
+            .query(`
+                UPDATE Workspace
+                SET name = @name
+                OUTPUT INSERTED.*
+                WHERE workspace_id = @workspaceId
+            `);
+
+        if (result.recordset.length === 0) {
+            return res.status(404).json({ message: 'Workspace not found' });
+        }
+
+        res.json(result.recordset[0]);
+    } catch (error) {
+        console.error('[updateWorkspace] Error:', error);
+        res.status(500).json({ message: 'Error updating workspace' });
     }
 };

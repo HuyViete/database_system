@@ -26,6 +26,7 @@ const theme = extendTheme({
         // Custom Trello-like colors
         trello: {
           appBar: '#026aa7',
+          appBarText: '#ffffff',
           boardBg: '#0079bf',
           listBg: '#ebecf0',
           cardBg: '#ffffff',
@@ -34,9 +35,19 @@ const theme = extendTheme({
           textSecondary: '#5e6c84',
           icon: '#42526e',
           border: '#091e4240',
+          commentPanelBg: '#e1e6ee',
+          commentPanelBorder: '#c5ccd6',
+          commentInputBg: '#f0f2f5',
           inputBg: '#FAFBFC',
           inputBorder: '#DFE1E6',
           inputBorderHover: '#A6C5E2',
+          navBg: '#ffffff',
+          navText: '#172B4D',
+          navItemBg: 'rgba(9, 30, 66, 0.08)',
+          navItemActiveColor: '#0052CC',
+          navItemActiveBg: '#E9F2FF',
+          createBoardBg: '#F0F2F5',
+          createBoardHover: '#E4E6EA',
           // Board specific colors (transparent overlays)
           boardHeaderBg: 'rgba(0,0,0,0.15)',
           boardButtonHover: 'rgba(255,255,255,0.2)',
@@ -45,7 +56,8 @@ const theme = extendTheme({
           boardListAddHover: 'rgba(255,255,255,0.32)',
           scrollTrack: 'rgba(0,0,0,0.15)',
           scrollThumb: 'rgba(255,255,255,0.4)',
-          scrollThumbHover: 'rgba(255,255,255,0.6)'
+          scrollThumbHover: 'rgba(255,255,255,0.6)',
+          modalBg: '#f4f5f7'
         }
       }
     },
@@ -54,18 +66,20 @@ const theme = extendTheme({
         primary: {
           main: '#579DFF',
           header: '#1D2125',
-          contrastText: '#FFFFFF'
+          contrastText: '#1D2125'
         },
         background: {
           default: '#1D2125',
           paper: '#22272B'
         },
         text: {
-          primary: '#FFFFFF',
+          primary: '#B6C2CF',
           secondary: '#9FADBC'
         },
+        divider: '#39424a',
         trello: {
           appBar: '#1D2125',
+          appBarText: '#9FADBC',
           boardBg: '#1D2125',
           listBg: '#101204',
           cardBg: '#22272B',
@@ -73,10 +87,20 @@ const theme = extendTheme({
           textMain: '#B6C2CF',
           textSecondary: '#9FADBC',
           icon: '#9FADBC',
-          border: '#738496',
+          border: '#39424a',
+          commentPanelBg: '#1b2026',
+          commentPanelBorder: '#2c343d',
+          commentInputBg: '#22272B',
           inputBg: '#22272B',
           inputBorder: '#738496',
           inputBorderHover: '#8590A2',
+          navBg: '#1D2125',
+          navText: '#9FADBC',
+          navItemBg: '#1c2b41',
+          navItemActiveColor: '#579DFF',
+          navItemActiveBg: '#1c2b41',
+          createBoardBg: '#282e33',
+          createBoardHover: '#333c43',
           // Board specific colors (transparent overlays)
           boardHeaderBg: 'rgba(0,0,0,0.15)',
           boardButtonHover: 'rgba(255,255,255,0.2)',
@@ -85,7 +109,8 @@ const theme = extendTheme({
           boardListAddHover: 'rgba(255,255,255,0.32)',
           scrollTrack: 'rgba(0,0,0,0.15)',
           scrollThumb: 'rgba(255,255,255,0.4)',
-          scrollThumbHover: 'rgba(255,255,255,0.6)'
+          scrollThumbHover: 'rgba(255,255,255,0.6)',
+          modalBg: '#2b2b2b'
         }
       }
     }
@@ -126,6 +151,12 @@ const theme = extendTheme({
       styleOverrides: {
         root: ({ theme }) => ({
           backgroundColor: theme.vars.palette.trello.inputBg,
+          '&.Mui-focused': {
+            backgroundColor: theme.vars.palette.trello.inputBg
+          },
+          '&:hover': {
+            backgroundColor: theme.vars.palette.trello.inputBg
+          },
           '& fieldset': {
             borderColor: theme.vars.palette.trello.inputBorder
           },

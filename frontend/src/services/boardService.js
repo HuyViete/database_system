@@ -1,6 +1,14 @@
 import api from '../libs/axios'
 
 const boardService = {
+  getWorkspace: async () => {
+    const response = await api.get('/boards/workspace')
+    return response.data
+  },
+  updateWorkspace: async (id, name) => {
+    const response = await api.put(`/boards/workspace/${id}`, { name })
+    return response.data
+  },
   getBoards: async () => {
     const response = await api.get('/boards')
     return response.data

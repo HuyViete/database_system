@@ -10,7 +10,8 @@ const config = {
     database: process.env.MSSQL_DATABASE,
     options: {
         encrypt: true, // true cho Azure, false cho local dev (thường là vậy)
-        trustServerCertificate: true // Quan trọng cho local dev để bỏ qua lỗi SSL
+        trustServerCertificate: true, // Quan trọng cho local dev để bỏ qua lỗi SSL
+        useUTC: false // Treat DB time as local time
     }
 };
 

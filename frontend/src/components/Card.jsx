@@ -1,4 +1,4 @@
-import { Paper, Typography, Box, TextField, IconButton, Menu, MenuItem } from '@mui/material'
+import { Paper, Typography, Box, IconButton, Menu, MenuItem } from '@mui/material'
 import { useState } from 'react'
 import theme from '../theme.js'
 import { useBoardStore } from '../stores/useBoardStore'
@@ -6,13 +6,11 @@ import { Draggable } from '@hello-pangea/dnd'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import DeleteIcon from '@mui/icons-material/Delete'
 
-function Card({ card, index }) {
+function Card({ card, index, onClick }) {
   const { card_id: cardId, name: title, labels = [], members = [] } = card
-  const [isEditing, setIsEditing] = useState(false)
-  const [cardTitle, setCardTitle] = useState(title)
   const [anchorEl, setAnchorEl] = useState(null)
   const open = Boolean(anchorEl)
-  const { updateCard, deleteCard } = useBoardStore()
+  const { deleteCard } = useBoardStore()
 
   const handleClick = (event) => {
     event.stopPropagation()
@@ -32,13 +30,6 @@ function Card({ card, index }) {
     handleClose()
   }
 
-  const handleUpdate = async () => {
-    if (cardTitle !== title) {
-      await updateCard(cardId, cardTitle)
-    }
-    setIsEditing(false)
-  }
-
   return (
     <Draggable draggableId={cardId} index={index}>
       {(provided) => (
@@ -46,6 +37,7 @@ function Card({ card, index }) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
+          onClick={onClick}
           sx={{
             backgroundColor: 'trello.cardBg',
             boxShadow: `0px 1px 1px ${theme.vars.palette.trello.border}`,
@@ -81,78 +73,46 @@ function Card({ card, index }) {
           )}
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            {isEditing ? (
-              <TextField
-                value={cardTitle}
-                onChange={(e) => setCardTitle(e.target.value)}
-                onBlur={handleUpdate}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleUpdate()
-                }}
-                autoFocus
-                multiline
-                fullWidth
-                size="small"
-                onClick={(e) => e.stopPropagation()}
-                sx={{
-                  '& .MuiInputBase-root': {
-                    fontSize: '0.9rem',
-                    padding: 0,
-                    backgroundColor: 'white',
-                  },
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
-                }}
-              />
-            ) : (
-              <Typography
-                variant="body1"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setIsEditing(true)
-                }}
-                sx={{
-                  fontSize: '0.9rem',
-                  color: 'trello.textMain',
-                  fontWeight: 400,
-                  wordWrap: 'break-word',
-                  flexGrow: 1
-                }}
-              >
-                {title}
-              </Typography>
-            )}
+            <Typography
+              variant="body1"
+              sx={{
+                fontSize: '0.9rem',
+                color: 'trello.textMain',
+                fontWeight: 400,
+                wordWrap: 'break-word',
+                flexGrow: 1
+              }}
+            >
+              {title}
+            </Typography>
             
-            {!isEditing && (
-              <>
-                <IconButton
-                  className="more-icon"
-                  size="small"
-                  onClick={handleClick}
-                  sx={{
-                    display: 'none',
-                    padding: '2px',
-                    borderRadius: '4px',
-                    color: 'trello.textSecondary',
-                    '&:hover': { backgroundColor: 'action.hover' },
-                    ml: 1,
-                    mt: -0.5
-                  }}
-                >
-                  <MoreHorizIcon fontSize="small" />
-                </IconButton>
-                <Menu
-                  anchorEl={anchorEl}
-                  open={open}
-                  onClose={handleClose}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MenuItem onClick={handleDeleteCard} sx={{ color: 'error.main', gap: 1 }}>
-                    <DeleteIcon fontSize="small" />
-                    <Typography variant="body2">Delete</Typography>
-                  </MenuItem>
-                </Menu>
-              </>
-            )}
+            <IconButton
+              className="more-icon"
+              size="small"
+              onClick={handleClick}
+              sx={{
+                display: 'none',
+                padding: '2px',
+                borderRadius: '4px',
+                color: 'trello.textSecondary',
+                '&:hover': { backgroundColor: 'action.hover' },
+                ml: 1,
+                mt: -0.5
+              }}
+            >
+              <MoreHorizIcon fontSize="small" />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleClose}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MenuItem onClick={handleDeleteCard} sx={{ color: 'error.main', gap: 1 }}>
+                <DeleteIcon fontSize="small" />
+                <Typography variant="body2">Delete</Typography>
+              </MenuItem>
+            </Menu>
           </Box>
 
       {/* Footer / Members Row */}

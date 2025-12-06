@@ -7,7 +7,7 @@ import LightModeIcon from '@mui/icons-material/LightMode'
 import DarkModeIcon from '@mui/icons-material/DarkMode'
 import ComputerIcon from '@mui/icons-material/Computer'
 
-function ModeSwitcher() {
+function ModeSwitcher({ sx }) {
   const { mode, setMode } = useColorScheme()
 
   const handleModeChange = (event) => {
@@ -39,8 +39,9 @@ function ModeSwitcher() {
         value={mode}
         onChange={handleModeChange}
         sx={{
+          color: 'trello.icon',
           minWidth: 'auto',
-          width: '40px',
+          // width: '40px',
           fontSize: { xs: '0.75rem', sm: '1rem' },
           '& .MuiSelect-select': {
             paddingRight: '0 !important',
@@ -48,7 +49,8 @@ function ModeSwitcher() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center'
-          }
+          },
+          ...sx
         }}
         variant='standard'
         disableUnderline={true}

@@ -2,10 +2,40 @@ import { create } from 'zustand'
 import boardService from '../services/boardService'
 
 export const useBoardStore = create((set) => ({
+  workspace: null,
   boards: [],
   currentBoard: null,
   loading: false,
   error: null,
+  isCreateBoardOpen: false,
+
+  setCreateBoardOpen: (isOpen) => set({ isCreateBoardOpen: isOpen }),
+
+  fetchWorkspace: async () => {
+    try {
+      set({ loading: true, error: null })
+      const workspace = await boardService.getWorkspace()
+      set({ workspace })
+    } catch (error) {
+      set({ error: error.message, loading: false })
+    } finally {
+      set({ loading: false })
+    }
+  },
+
+  updateWorkspaceName: async (id, name) => {
+    try {
+      set({ loading: true, error: null })
+      const updatedWorkspace = await boardService.updateWorkspace(id, name)
+      set({ workspace: updatedWorkspace })
+      return updatedWorkspace
+    } catch (error) {
+      set({ error: error.message, loading: false })
+      throw error
+    } finally {
+      set({ loading: false })
+    }
+  },
 
   fetchBoards: async () => {
     set({ loading: true, error: null })
@@ -77,12 +107,15 @@ export const useBoardStore = create((set) => ({
     }
   },
 
-  updateBoard: async (id, name) => {
+  updateBoard: async (id, updates) => {
     try {
-      const updatedBoard = await boardService.updateBoard(id, { name })
+      // If updates is just a string, assume it's the name (backward compatibility)
+      const data = typeof updates === 'string' ? { name: updates } : updates
+      
+      const updatedBoard = await boardService.updateBoard(id, data)
       set((state) => ({
-        currentBoard: { ...state.currentBoard, name: updatedBoard.name },
-        boards: state.boards.map(b => b.board_id === id ? { ...b, name: updatedBoard.name } : b)
+        currentBoard: { ...state.currentBoard, ...updatedBoard },
+        boards: state.boards.map(b => b.board_id === id ? { ...b, ...updatedBoard } : b)
       }))
     } catch (error) {
       console.error(error)

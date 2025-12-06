@@ -1,161 +1,263 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../stores/useAuthStore'
+import { useNavigate } from 'react-router-dom'
 import { useBoardStore } from '../stores/useBoardStore'
+import AppHeader from '../components/AppHeader'
 import {
   Box,
   Typography,
   Grid,
   Paper,
-  Button,
-  AppBar,
-  Toolbar,
-  Avatar,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Collapse,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  TextField,
-  DialogActions
+  TextField
 } from '@mui/material'
-import DashboardIcon from '@mui/icons-material/Dashboard'
-import AddIcon from '@mui/icons-material/Add'
+import {
+  Add as AddIcon,
+  Dashboard as DashboardIcon,
+  Home as HomeIcon,
+  Settings as SettingsIcon,
+  Person as PersonIcon,
+  Lock as LockIcon,
+  Edit as EditIcon,
+  KeyboardArrowDown,
+  KeyboardArrowUp,
+  TableChart as TemplateIcon,
+  Check as CheckIcon,
+  Close as CloseIcon
+} from '@mui/icons-material'
 
 function Dashboard() {
   const navigate = useNavigate()
-  const { user, accessToken, signOut } = useAuthStore()
-  const { boards, fetchBoards, createBoard } = useBoardStore()
-  const [openNewBoard, setOpenNewBoard] = useState(false)
-  const [newBoardName, setNewBoardName] = useState('')
+  const { boards, fetchBoards, setCreateBoardOpen, workspace, fetchWorkspace, updateWorkspaceName } = useBoardStore()
+  const [workspaceExpanded, setWorkspaceExpanded] = useState(true)
+  const [isEditingWorkspace, setIsEditingWorkspace] = useState(false)
+  const [editingName, setEditingName] = useState('')
 
   useEffect(() => {
-    // ProtectedRoute handles the redirect, but we can double check
-    // or just rely on the API call failing if token is invalid
     fetchBoards()
-  }, [fetchBoards])
+    fetchWorkspace()
+  }, [fetchBoards, fetchWorkspace])
 
-  const handleCreateBoard = async () => {
+  const handleSaveWorkspaceName = async () => {
+    if (!editingName.trim() || !workspace?.workspace_id) return
     try {
-      const newBoard = await createBoard({ name: newBoardName, background_color: '#0079bf' })
-      setOpenNewBoard(false)
-      setNewBoardName('')
-      navigate(`/board/${newBoard.board_id}`)
-    } catch (err) {
-      console.error(err)
+      await updateWorkspaceName(workspace.workspace_id, editingName)
+      setIsEditingWorkspace(false)
+    } catch (error) {
+      console.error('Failed to update workspace name:', error)
     }
   }
 
-  const handleLogout = () => {
-    signOut()
-    navigate('/login')
+  const handleCancelEdit = () => {
+    setEditingName(workspace?.name || '')
+    setIsEditingWorkspace(false)
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* App Bar */}
-      <AppBar position="static" sx={{ bgcolor: 'trello.appBar' }}>
-        <Toolbar variant="dense" sx={{ display: 'flex', justifyContent: 'space-between' }}>
-          <Button 
-            sx={{ display: 'flex', alignItems: 'center', color: 'white' }}
-            onClick={() => navigate('/')}>
-            <DashboardIcon sx={{ mr: 1 }} />
-            <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-              Brello
-            </Typography>
-          </Button>
-          <Box sx={{ display: 'flex', alignItems: 'center'}}>
-            <Button color='inherit' sx={{ mr: 2 }}>
-            {user?.username}
-            </Button>
-            <Button color="inherit" onClick={handleLogout} size="small">Logout</Button>
-          </Box>
-        </Toolbar>
-      </AppBar>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.secondary' }}>
+      <AppHeader />
 
-      <Box sx={{ p: 4, maxWidth: '1200px', mx: 'auto' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <DashboardIcon sx={{ mr: 1, color: 'trello.icon' }} />
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'trello.textMain' }}>
-            Your Boards
-          </Typography>
+      <Box sx={{ display: 'flex', height: 'calc(100vh - 48px)' }}>
+        {/* Sidebar */}
+        <Box sx={{ width: 260, p: 2, display: { xs: 'none', md: 'block' } }}>
+          <List dense>
+            <ListItemButton sx={{ borderRadius: 1, mb: 0.5, color: 'primary.main', bgcolor: 'trello.navItemBg' }}>
+              <ListItemIcon sx={{ minWidth: 32, color: 'primary.main' }}><DashboardIcon fontSize="small" /></ListItemIcon>
+              <ListItemText primary="Boards" primaryTypographyProps={{ fontWeight: 500 }} />
+            </ListItemButton>
+            <ListItemButton sx={{ borderRadius: 1, mb: 0.5, color: 'text.secondary' }}>
+              <ListItemIcon sx={{ minWidth: 32, color: 'text.secondary' }}><TemplateIcon fontSize="small" /></ListItemIcon>
+              <ListItemText primary="Templates" primaryTypographyProps={{ fontWeight: 500 }} />
+            </ListItemButton>
+            <ListItemButton sx={{ borderRadius: 1, mb: 0.5, color: 'text.secondary' }}>
+              <ListItemIcon sx={{ minWidth: 32, color: 'text.secondary' }}><HomeIcon fontSize="small" /></ListItemIcon>
+              <ListItemText primary="Home" primaryTypographyProps={{ fontWeight: 500 }} />
+            </ListItemButton>
+          </List>
+
+          <Divider sx={{ my: 1.5, borderColor: 'divider' }} />
+
+          <Box sx={{ px: 1.5, pb: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>Workspaces</Typography>
+          </Box>
+
+          <ListItemButton onClick={() => setWorkspaceExpanded(!workspaceExpanded)} sx={{ borderRadius: 1, color: 'text.secondary' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+              <Box sx={{ 
+                width: 24, 
+                height: 24, 
+                background: 'linear-gradient(135deg, #4bbf6b 0%, #2f9e4f 100%)', 
+                borderRadius: '4px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.8rem'
+              }}>
+                {workspace?.name?.[0]?.toUpperCase() || 'T'}
+              </Box>
+              <Typography sx={{ flexGrow: 1, fontWeight: 500, fontSize: '0.9rem' }}>{workspace?.name || 'Trello Workspace'}</Typography>
+              {workspaceExpanded ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
+            </Box>
+          </ListItemButton>
+
+          <Collapse in={workspaceExpanded} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding dense>
+              <ListItemButton sx={{ pl: 5, borderRadius: 1, color: 'text.secondary', bgcolor: 'trello.navItemBg', mt: 0.5 }}>
+                <ListItemIcon sx={{ minWidth: 28, color: 'text.secondary' }}><DashboardIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Boards" />
+              </ListItemButton>
+              <ListItemButton sx={{ pl: 5, borderRadius: 1, color: 'text.secondary' }}>
+                <ListItemIcon sx={{ minWidth: 28, color: 'text.secondary' }}><PersonIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Members" />
+                <IconButton><AddIcon fontSize="small" sx={{ ml: 'auto', width: 16, height: 16 }} /></IconButton>
+              </ListItemButton>
+              <ListItemButton sx={{ pl: 5, borderRadius: 1, color: 'text.secondary' }}>
+                <ListItemIcon sx={{ minWidth: 28, color: 'text.secondary' }}><SettingsIcon fontSize="small" /></ListItemIcon>
+                <ListItemText primary="Settings" />
+              </ListItemButton>
+            </List>
+          </Collapse>
         </Box>
 
-        <Grid container spacing={2}>
-          {boards.map((board) => (
-            <Grid item xs={12} sm={6} md={3} key={board.board_id}>
+        {/* Main Content */}
+        <Box sx={{ flexGrow: 1, p: 4, overflowY: 'auto' }}>
+          {/* Workspace Header */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Box sx={{ 
+              width: 60, 
+              height: 60, 
+              background: 'linear-gradient(135deg, #4bbf6b 0%, #2f9e4f 100%)', 
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '2rem',
+              fontWeight: 'bold'
+            }}>
+              T
+            </Box>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, height: 40 }}>
+                {isEditingWorkspace ? (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <TextField
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      size="small"
+                      autoFocus
+                      sx={{ 
+                        '& .MuiInputBase-root': { 
+                          fontSize: '1.5rem', 
+                          fontWeight: 'bold',
+                          height: 40,
+                          p: 0
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                        '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { border: '1px solid', borderColor: 'primary.main' },
+                        '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { border: '2px solid', borderColor: 'primary.main' }
+                      }}
+                    />
+                    <IconButton size="small" onClick={handleSaveWorkspaceName} sx={{ color: 'success.main', bgcolor: 'success.light', '&:hover': { bgcolor: 'success.main', color: 'white' } }}>
+                      <CheckIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" onClick={handleCancelEdit} sx={{ color: 'error.main', bgcolor: 'error.light', '&:hover': { bgcolor: 'error.main', color: 'white' } }}>
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <>
+                    <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'text.primary' }}>{workspace?.name || 'Not Found'}</Typography>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => {
+                        setEditingName(workspace?.name || '')
+                        setIsEditingWorkspace(true)
+                      }} 
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </>
+                )}
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                <LockIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>Private</Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          <Divider sx={{ borderColor: 'divider', mb: 4 }} />
+
+          {/* Your Boards Section */}
+          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <PersonIcon sx={{ color: 'text.secondary' }} />
+            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'text.primary' }}>Your boards</Typography>
+          </Box>
+
+          <Grid container spacing={2}>
+            {/* Existing Boards */}
+            {boards.map((board) => (
+              <Grid item xs={12} sm={6} md={3} key={board.board_id}>
+                <Paper
+                  onClick={() => navigate(`/board/${board.board_id}`)}
+                  sx={{
+                    height: '100px',
+                    width: '202px',
+                    p: 2,
+                    background: board.background_color && board.background_color.startsWith('#') 
+                      ? board.background_color 
+                      : 'linear-gradient(to bottom right, #ff9966, #ff5e62)', 
+                    color: 'white',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    position: 'relative',
+                    transition: 'filter 0.2s',
+                    '&:hover': { filter: 'brightness(0.9)' },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                    {board.name}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+
+            {/* Create New Board Card */}
+            <Grid item xs={12} sm={6} md={3}>
               <Paper
+                onClick={() => setCreateBoardOpen(true)}
                 sx={{
                   height: '100px',
-                  p: 2,
-                  bgcolor: board.background_color || 'trello.boardBg',
-                  color: 'white',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  transition: 'filter 0.2s',
-                  '&:hover': {
-                    filter: 'brightness(0.9)'
-                  },
+                  width: '100px',
                   display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: 'trello.createBoardBg',
+                  color: 'text.secondary',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s',
+                  '&:hover': { bgcolor: 'trello.createBoardHover' }
                 }}
-                onClick={() => navigate(`/board/${board.board_id}`)}
               >
-                <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
-                  {board.name}
-                </Typography>
+                <AddIcon></AddIcon>
               </Paper>
             </Grid>
-          ))}
-
-          {/* Create New Board Button */}
-          <Grid item xs={12} sm={6} md={3}>
-            <Paper
-              sx={{
-                height: '100px',
-                p: 2,
-                bgcolor: 'trello.listBg',
-                color: 'trello.textMain',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&:hover': {
-                  bgcolor: 'action.hover'
-                }
-              }}
-              onClick={() => setOpenNewBoard(true)}
-            >
-              <Typography sx={{ display: 'flex', alignItems: 'center' }}>
-                <AddIcon sx={{ mr: 0.5 }} /> Create new board
-              </Typography>
-            </Paper>
           </Grid>
-        </Grid>
+        </Box>
       </Box>
-
-      {/* Create Board Dialog */}
-      <Dialog open={openNewBoard} onClose={() => setOpenNewBoard(false)}>
-        <DialogTitle>Create Board</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Board Title"
-            fullWidth
-            variant="outlined"
-            value={newBoardName}
-            onChange={(e) => setNewBoardName(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenNewBoard(false)}>Cancel</Button>
-          <Button onClick={handleCreateBoard} variant="contained" disabled={!newBoardName}>
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   )
 }
