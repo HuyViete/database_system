@@ -2,31 +2,21 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBoardStore } from '../stores/useBoardStore'
 import AppHeader from '../components/AppHeader'
+import Sidebar from '../components/Sidebar'
 import {
   Box,
   Typography,
   Grid,
   Paper,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  Collapse,
   IconButton,
-  TextField
+  TextField,
+  Divider
 } from '@mui/material'
 import {
   Add as AddIcon,
-  Dashboard as DashboardIcon,
-  Home as HomeIcon,
-  Settings as SettingsIcon,
   Person as PersonIcon,
   Lock as LockIcon,
   Edit as EditIcon,
-  KeyboardArrowDown,
-  KeyboardArrowUp,
-  TableChart as TemplateIcon,
   Check as CheckIcon,
   Close as CloseIcon
 } from '@mui/icons-material'
@@ -34,7 +24,6 @@ import {
 function Dashboard() {
   const navigate = useNavigate()
   const { boards, fetchBoards, setCreateBoardOpen, workspace, fetchWorkspace, updateWorkspaceName } = useBoardStore()
-  const [workspaceExpanded, setWorkspaceExpanded] = useState(true)
   const [isEditingWorkspace, setIsEditingWorkspace] = useState(false)
   const [editingName, setEditingName] = useState('')
 
@@ -63,68 +52,7 @@ function Dashboard() {
       <AppHeader />
 
       <Box sx={{ display: 'flex', height: 'calc(100vh - 48px)' }}>
-        {/* Sidebar */}
-        <Box sx={{ width: 260, p: 2, display: { xs: 'none', md: 'block' } }}>
-          <List dense>
-            <ListItemButton sx={{ borderRadius: 1, mb: 0.5, color: 'primary.main', bgcolor: 'trello.navItemBg' }}>
-              <ListItemIcon sx={{ minWidth: 32, color: 'primary.main' }}><DashboardIcon fontSize="small" /></ListItemIcon>
-              <ListItemText primary="Boards" primaryTypographyProps={{ fontWeight: 500 }} />
-            </ListItemButton>
-            <ListItemButton sx={{ borderRadius: 1, mb: 0.5, color: 'text.secondary' }}>
-              <ListItemIcon sx={{ minWidth: 32, color: 'text.secondary' }}><TemplateIcon fontSize="small" /></ListItemIcon>
-              <ListItemText primary="Templates" primaryTypographyProps={{ fontWeight: 500 }} />
-            </ListItemButton>
-            <ListItemButton sx={{ borderRadius: 1, mb: 0.5, color: 'text.secondary' }}>
-              <ListItemIcon sx={{ minWidth: 32, color: 'text.secondary' }}><HomeIcon fontSize="small" /></ListItemIcon>
-              <ListItemText primary="Home" primaryTypographyProps={{ fontWeight: 500 }} />
-            </ListItemButton>
-          </List>
-
-          <Divider sx={{ my: 1.5, borderColor: 'divider' }} />
-
-          <Box sx={{ px: 1.5, pb: 1 }}>
-            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>Workspaces</Typography>
-          </Box>
-
-          <ListItemButton onClick={() => setWorkspaceExpanded(!workspaceExpanded)} sx={{ borderRadius: 1, color: 'text.secondary' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-              <Box sx={{ 
-                width: 24, 
-                height: 24, 
-                background: 'linear-gradient(135deg, #4bbf6b 0%, #2f9e4f 100%)', 
-                borderRadius: '4px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: '0.8rem'
-              }}>
-                {workspace?.name?.[0]?.toUpperCase() || 'T'}
-              </Box>
-              <Typography sx={{ flexGrow: 1, fontWeight: 500, fontSize: '0.9rem' }}>{workspace?.name || 'Trello Workspace'}</Typography>
-              {workspaceExpanded ? <KeyboardArrowUp fontSize="small" /> : <KeyboardArrowDown fontSize="small" />}
-            </Box>
-          </ListItemButton>
-
-          <Collapse in={workspaceExpanded} timeout="auto" unmountOnExit>
-            <List component="div" disablePadding dense>
-              <ListItemButton sx={{ pl: 5, borderRadius: 1, color: 'text.secondary', bgcolor: 'trello.navItemBg', mt: 0.5 }}>
-                <ListItemIcon sx={{ minWidth: 28, color: 'text.secondary' }}><DashboardIcon fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Boards" />
-              </ListItemButton>
-              <ListItemButton sx={{ pl: 5, borderRadius: 1, color: 'text.secondary' }}>
-                <ListItemIcon sx={{ minWidth: 28, color: 'text.secondary' }}><PersonIcon fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Members" />
-                <IconButton><AddIcon fontSize="small" sx={{ ml: 'auto', width: 16, height: 16 }} /></IconButton>
-              </ListItemButton>
-              <ListItemButton sx={{ pl: 5, borderRadius: 1, color: 'text.secondary' }}>
-                <ListItemIcon sx={{ minWidth: 28, color: 'text.secondary' }}><SettingsIcon fontSize="small" /></ListItemIcon>
-                <ListItemText primary="Settings" />
-              </ListItemButton>
-            </List>
-          </Collapse>
-        </Box>
+        <Sidebar />
 
         {/* Main Content */}
         <Box sx={{ flexGrow: 1, p: 4, overflowY: 'auto' }}>

@@ -3,6 +3,9 @@ import { pool } from '../libs/db.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import * as UserModel from '../models/User.js';
+import * as SessionModel from '../models/Session.js';
+import * as MonitorModel from '../models/Monitor.js';
 
 export const signup = async (req, res) => {
     const { username, firstName, lastName, email, password, birthDate } = req.body;
@@ -11,21 +14,13 @@ export const signup = async (req, res) => {
     try {
         await transaction.begin();
         
-        // 1. Check if username or email exists (Basic check, DB constraints will also catch this)
-        const check = await pool.request()
-            .input('username', mssql.VarChar, username)
-            .input('email', mssql.VarChar, email)
-            .query(`
-                SELECT 
-                    (SELECT COUNT(*) FROM [User] WHERE username = @username) as userCount,
-                    (SELECT COUNT(*) FROM Member WHERE login_email = @email) as emailCount
-            `);
+        const check = await UserModel.checkUserExists(username, email);
             
-        if (check.recordset[0].userCount > 0) {
+        if (check.userCount > 0) {
             await transaction.rollback();
             return res.status(400).json({ message: 'Username already exists' });
         }
-        if (check.recordset[0].emailCount > 0) {
+        if (check.emailCount > 0) {
             await transaction.rollback();
             return res.status(400).json({ message: 'Email already exists' });
         }
@@ -33,32 +28,8 @@ export const signup = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
         
-        // 2. Insert into User
-        const userRequest = new mssql.Request(transaction);
-        const userResult = await userRequest
-            .input('username', mssql.VarChar, username)
-            .input('firstName', mssql.NVarChar, firstName)
-            .input('lastName', mssql.NVarChar, lastName)
-            .input('birthDate', mssql.Date, birthDate || null)
-            .query(`
-                INSERT INTO [User] (username, first_name, last_name, birth_date)
-                OUTPUT INSERTED.user_id
-                VALUES (@username, @firstName, @lastName, @birthDate)
-            `);
-            
-        const userId = userResult.recordset[0].user_id;
-        
-        // 3. Insert into Member
-        const memberRequest = new mssql.Request(transaction);
-        await memberRequest
-            .input('memberId', mssql.UniqueIdentifier, userId)
-            .input('email', mssql.VarChar, email)
-            .input('passwordHash', mssql.VarChar, hashedPassword)
-            .input('status', mssql.VarChar, 'active')
-            .query(`
-                INSERT INTO Member (member_id, login_email, password_hash, status)
-                VALUES (@memberId, @email, @passwordHash, @status)
-            `);
+        const userId = await UserModel.createUser(transaction, username, firstName, lastName, birthDate);
+        await UserModel.createMember(transaction, userId, email, hashedPassword, 'active');
             
         await transaction.commit();
         
@@ -79,20 +50,11 @@ export const login = async (req, res) => {
     const ipAddress = req.ip;
     
     try {
-        const result = await pool.request()
-            .input('email', mssql.VarChar, email)
-            .query(`
-                SELECT u.user_id, u.username, u.first_name, u.last_name, m.password_hash, m.status
-                FROM Member m
-                JOIN [User] u ON m.member_id = u.user_id
-                WHERE m.login_email = @email
-            `);
+        const user = await UserModel.getUserByEmail(email);
             
-        if (result.recordset.length === 0) {
+        if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-        
-        const user = result.recordset[0];
         
         const isMatch = await bcrypt.compare(password, user.password_hash);
         
@@ -100,105 +62,90 @@ export const login = async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
         
-        // Generate Tokens
+        await UserModel.updateLastLogin(user.user_id);
+        
         const accessToken = jwt.sign(
-            { id: user.user_id, type: 'member' }, 
-            process.env.ACCESS_TOKEN_SECRET || 'access_secret', 
+            { id: user.user_id, username: user.username, type: 'member' },
+            process.env.ACCESS_TOKEN_SECRET || 'secret',
             { expiresIn: '15m' }
         );
         
-        const refreshToken = jwt.sign(
-            { id: user.user_id, type: 'member' }, 
-            process.env.REFRESH_TOKEN_SECRET || 'refresh_secret', 
-            { expiresIn: '7d' }
-        );
+        const refreshToken = crypto.randomBytes(40).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
         
-        // Store Session
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7);
+        await SessionModel.createSession(user.user_id, refreshToken, expiresAt, ipAddress, userAgent);
         
-        await pool.request()
-            .input('userId', mssql.UniqueIdentifier, user.user_id)
-            .input('refreshToken', mssql.VarChar, refreshToken)
-            .input('userAgent', mssql.NVarChar, userAgent)
-            .input('ipAddress', mssql.VarChar, ipAddress)
-            .input('expiresAt', mssql.DateTime2, expiresAt)
-            .query(`
-                INSERT INTO Sessions (user_id, refresh_token, user_agent, ip_address, expires_at)
-                VALUES (@userId, @refreshToken, @userAgent, @ipAddress, @expiresAt)
-            `);
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
         
-        res.json({ 
-            accessToken, 
-            refreshToken,
-            user: { 
-                id: user.user_id, 
-                username: user.username, 
-                firstName: user.first_name, 
+        res.json({
+            accessToken,
+            user: {
+                id: user.user_id,
+                username: user.username,
+                firstName: user.first_name,
                 lastName: user.last_name,
                 type: 'member'
-            } 
+            }
         });
         
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Error logging in' });
     }
 };
 
-export const refreshToken = async (req, res) => {
-    const { refreshToken } = req.body;
-    if (!refreshToken) return res.status(401).json({ message: 'Refresh Token Required' });
-
+export const refresh = async (req, res) => {
+    const { refreshToken } = req.cookies;
+    
+    if (!refreshToken) {
+        return res.status(401).json({ message: 'No refresh token provided' });
+    }
+    
     try {
-        // Check DB
-        const result = await pool.request()
-            .input('refreshToken', mssql.VarChar, refreshToken)
-            .query(`
-                SELECT * FROM Sessions 
-                WHERE refresh_token = @refreshToken 
-                AND is_revoked = 0 
-                AND expires_at > GETDATE()
-            `);
+        const session = await SessionModel.getSessionByToken(refreshToken);
             
-        if (result.recordset.length === 0) {
-            return res.status(403).json({ message: 'Invalid or Expired Refresh Token' });
+        if (!session) {
+            return res.status(403).json({ message: 'Invalid refresh token' });
         }
         
-        const session = result.recordset[0];
+        const user = await UserModel.getUserById(session.user_id);
         
-        // Verify JWT
-        jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || 'refresh_secret', (err, decoded) => {
-            if (err) return res.status(403).json({ message: 'Invalid Token Signature' });
-            
-            // Generate new Access Token
-            const accessToken = jwt.sign(
-                { id: decoded.id, type: decoded.type }, 
-                process.env.ACCESS_TOKEN_SECRET || 'access_secret', 
-                { expiresIn: '15m' }
-            );
-            
-            res.json({ accessToken });
-        });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        const accessToken = jwt.sign(
+            { id: user.user_id, username: user.username, type: 'member' },
+            process.env.ACCESS_TOKEN_SECRET || 'secret',
+            { expiresIn: '15m' }
+        );
+        
+        res.json({ accessToken });
         
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ message: 'Error refreshing token' });
     }
 };
 
 export const logout = async (req, res) => {
-    const { refreshToken } = req.body;
-    if (!refreshToken) return res.sendStatus(204); // No content
+    const { refreshToken } = req.cookies;
     
-    try {
-        await pool.request()
-            .input('refreshToken', mssql.VarChar, refreshToken)
-        res.sendStatus(204);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    if (refreshToken) {
+        try {
+            await SessionModel.revokeSession(refreshToken);
+        } catch (error) {
+            console.error('Error revoking session:', error);
+        }
     }
+    
+    res.clearCookie('refreshToken');
+    res.json({ message: 'Logged out successfully' });
 };
     
 export const monitorLogin = async (req, res) => {
@@ -206,20 +153,13 @@ export const monitorLogin = async (req, res) => {
     
     try {
         if (token) {
-            // Login existing monitor
-            const result = await pool.request()
-                .input('token', mssql.VarChar, token)
-                .query(`
-                    JOIN [User] u ON m.monitor_id = u.user_id
-                    WHERE m.token = @token
-                `);
+            const user = await MonitorModel.getMonitorByToken(token);
                 
-            if (result.recordset.length === 0) {
+            if (!user) {
                 return res.status(404).json({ message: 'Invalid monitor token' });
             }
             
-            const user = result.recordset[0];
-            const jwtToken = jwt.sign({ id: user.user_id, type: 'monitor' }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+            const jwtToken = jwt.sign({ id: user.user_id, type: 'monitor' }, process.env.ACCESS_TOKEN_SECRET || 'secret', { expiresIn: '7d' });
             
             return res.json({
                 token: jwtToken,
@@ -231,38 +171,19 @@ export const monitorLogin = async (req, res) => {
                 }
             });
         } else {
-            // Create new monitor
             const transaction = new mssql.Transaction(pool);
             await transaction.begin();
             
             try {
-                // Insert User
-                const userRequest = new mssql.Request(transaction);
-                const userResult = await userRequest
-                    .input('username', mssql.VarChar, generatedUsername)
-                    .input('firstName', mssql.NVarChar, 'Monitor')
-                    .input('lastName', mssql.NVarChar, 'User')
-                    .query(`
-                        INSERT INTO [User] (username, first_name, last_name)
-                        OUTPUT INSERTED.user_id
-                        VALUES (@username, @firstName, @lastName)
-                    `);
-                
-                const userId = userResult.recordset[0].user_id;
-                
-                // Insert Monitor
-                const monitorRequest = new mssql.Request(transaction);
-                await monitorRequest
-                    .input('monitorId', mssql.UniqueIdentifier, userId)
-                    .input('token', mssql.VarChar, generatedToken)
-                    .query(`
-                        INSERT INTO Monitor (monitor_id, token)
-                        VALUES (@monitorId, @token)
-                    `);
+                const generatedUsername = username || `Monitor_${crypto.randomBytes(4).toString('hex')}`;
+                const generatedToken = crypto.randomBytes(20).toString('hex');
+
+                const userId = await UserModel.createUser(transaction, generatedUsername, 'Monitor', 'User', null);
+                await MonitorModel.createMonitor(transaction, userId, generatedToken);
                     
                 await transaction.commit();
                 
-                const jwtToken = jwt.sign({ id: userId, type: 'monitor' }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+                const jwtToken = jwt.sign({ id: userId, type: 'monitor' }, process.env.ACCESS_TOKEN_SECRET || 'secret', { expiresIn: '7d' });
                 
                 res.status(201).json({
                     token: jwtToken,

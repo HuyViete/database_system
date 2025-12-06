@@ -1,31 +1,11 @@
-import mssql from 'mssql';
-import { pool } from '../libs/db.js';
+import * as CommentModel from '../models/Comment.js';
 
 export const getComments = async (req, res) => {
     const { cardId } = req.params;
 
     try {
-        const result = await pool.request()
-            .input('cardId', mssql.UniqueIdentifier, cardId)
-            .query(`
-                SELECT 
-                    c.comment_id,
-                    c.text,
-                    c.time_created,
-                    c.is_edited,
-                    u.username,
-                    u.avatar_url,
-                    u.first_name,
-                    u.last_name,
-                    c.member_id
-                FROM Comment c
-                JOIN Member m ON c.member_id = m.member_id
-                JOIN [User] u ON m.member_id = u.user_id
-                WHERE c.card_id = @cardId
-                ORDER BY c.time_created DESC
-            `);
-
-        res.json(result.recordset);
+        const comments = await CommentModel.getCommentsByCardId(cardId);
+        res.json(comments);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error fetching comments' });
@@ -35,41 +15,13 @@ export const getComments = async (req, res) => {
 export const createComment = async (req, res) => {
     const { cardId } = req.params;
     const { text } = req.body;
-    const memberId = req.user.user_id; // Assuming auth middleware adds user to req
+    const memberId = req.user.user_id;
 
     try {
-        const result = await pool.request()
-            .input('cardId', mssql.UniqueIdentifier, cardId)
-            .input('memberId', mssql.UniqueIdentifier, memberId)
-            .input('text', mssql.NVarChar, text)
-            .query(`
-                INSERT INTO Comment (card_id, member_id, text)
-                OUTPUT INSERTED.*
-                VALUES (@cardId, @memberId, @text)
-            `);
+        const newCommentId = await CommentModel.createComment(cardId, memberId, text);
+        const newComment = await CommentModel.getCommentById(newCommentId);
 
-        // Fetch the created comment with user details
-        const newCommentId = result.recordset[0].comment_id;
-        const commentWithUser = await pool.request()
-            .input('commentId', mssql.UniqueIdentifier, newCommentId)
-            .query(`
-                SELECT 
-                    c.comment_id,
-                    c.text,
-                    c.time_created,
-                    c.is_edited,
-                    u.username,
-                    u.avatar_url,
-                    u.first_name,
-                    u.last_name,
-                    c.member_id
-                FROM Comment c
-                JOIN Member m ON c.member_id = m.member_id
-                JOIN [User] u ON m.member_id = u.user_id
-                WHERE c.comment_id = @commentId
-            `);
-
-        res.status(201).json(commentWithUser.recordset[0]);
+        res.status(201).json(newComment);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error creating comment' });
@@ -82,30 +34,22 @@ export const updateComment = async (req, res) => {
     const memberId = req.user.user_id;
 
     try {
-        // Check if comment belongs to user
-        const check = await pool.request()
-            .input('commentId', mssql.UniqueIdentifier, commentId)
-            .query('SELECT member_id FROM Comment WHERE comment_id = @commentId');
+        const ownerId = await CommentModel.getCommentOwner(commentId);
 
-        if (check.recordset.length === 0) {
+        if (!ownerId) {
             return res.status(404).json({ message: 'Comment not found' });
         }
 
-        if (check.recordset[0].member_id !== memberId) {
+        if (ownerId !== memberId) {
             return res.status(403).json({ message: 'Not authorized to update this comment' });
         }
 
-        const result = await pool.request()
-            .input('commentId', mssql.UniqueIdentifier, commentId)
-            .input('text', mssql.NVarChar, text)
-            .query(`
-                UPDATE Comment
-                SET text = @text, is_edited = 1
-                OUTPUT INSERTED.*
-                WHERE comment_id = @commentId
-            `);
+        const updatedComment = await CommentModel.updateComment(commentId, text);
+        
+        // Fetch full details again to return consistent format
+        const fullUpdatedComment = await CommentModel.getCommentById(commentId);
 
-        res.json(result.recordset[0]);
+        res.json(fullUpdatedComment);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error updating comment' });
@@ -117,22 +61,17 @@ export const deleteComment = async (req, res) => {
     const memberId = req.user.user_id;
 
     try {
-        // Check if comment belongs to user
-        const check = await pool.request()
-            .input('commentId', mssql.UniqueIdentifier, commentId)
-            .query('SELECT member_id FROM Comment WHERE comment_id = @commentId');
+        const ownerId = await CommentModel.getCommentOwner(commentId);
 
-        if (check.recordset.length === 0) {
+        if (!ownerId) {
             return res.status(404).json({ message: 'Comment not found' });
         }
 
-        if (check.recordset[0].member_id !== memberId) {
+        if (ownerId !== memberId) {
             return res.status(403).json({ message: 'Not authorized to delete this comment' });
         }
 
-        await pool.request()
-            .input('commentId', mssql.UniqueIdentifier, commentId)
-            .query('DELETE FROM Comment WHERE comment_id = @commentId');
+        await CommentModel.deleteComment(commentId);
 
         res.json({ message: 'Comment deleted successfully' });
     } catch (error) {

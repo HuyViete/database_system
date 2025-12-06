@@ -10,7 +10,13 @@ import {
   Button,
   Avatar,
   Chip,
-  DialogTitle
+  DialogTitle,
+  Popover,
+  List,
+  ListItem,
+  ListItemButton,
+  Checkbox,
+  ListItemIcon
 } from '@mui/material'
 import {
   Close as CloseIcon,
@@ -19,7 +25,14 @@ import {
   AccessTime as AccessTimeIcon,
   ChatBubbleOutline as CommentIcon,
   Send as SendIcon,
-  MoreHoriz
+  MoreHoriz,
+  Add as AddIcon,
+  Label as LabelIcon,
+  CheckBox as CheckBoxIcon,
+  Person as PersonIcon,
+  AttachFile as AttachFileIcon,
+  Edit as EditIcon,
+  ArrowBack as ArrowBackIcon
 } from '@mui/icons-material'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -28,6 +41,7 @@ import dayjs from 'dayjs'
 import { useBoardStore } from '../stores/useBoardStore'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useCommentStore } from '../stores/useCommentStore'
+import { useLabelStore } from '../stores/useLabelStore'
 import Comment from './Comment'
 
 function CardDetailModal({ open, onClose, card, listName }) {
@@ -38,6 +52,24 @@ function CardDetailModal({ open, onClose, card, listName }) {
   const { updateCard } = useBoardStore()
   const { user } = useAuthStore()
   const { comments, fetchComments, addComment, editComment, removeComment, clearComments } = useCommentStore()
+  const { currentBoard } = useBoardStore()
+  const { labels, cardLabels, fetchBoardLabels, fetchCardLabels, createLabel, updateLabel, addLabelToCard, removeLabelFromCard } = useLabelStore()
+
+  const [labelAnchorEl, setLabelAnchorEl] = useState(null)
+  const [labelSearch, setLabelSearch] = useState('')
+  const [labelView, setLabelView] = useState('list') // 'list', 'create', 'edit'
+  const [editingLabel, setEditingLabel] = useState(null)
+  const [newLabelName, setNewLabelName] = useState('')
+  const [newLabelColor, setNewLabelColor] = useState('')
+
+  const BASIC_COLORS = [
+    '#61bd4f', // Green
+    '#f2d600', // Yellow
+    '#ff9f1a', // Orange
+    '#eb5a46', // Red
+    '#c377e0', // Pink
+    '#00c2e0'  // Sky
+  ]
 
   useEffect(() => {
     if (card) {
@@ -46,11 +78,77 @@ function CardDetailModal({ open, onClose, card, listName }) {
       setDueDate(card.due_date ? dayjs(card.due_date) : null)
       if (card.card_id) {
         fetchComments(card.card_id)
+        if (currentBoard) {
+          fetchBoardLabels(currentBoard.board_id)
+          fetchCardLabels(card.card_id)
+        }
       }
     } else {
       clearComments()
     }
-  }, [card, fetchComments, clearComments])
+  }, [card, fetchComments, clearComments, currentBoard, fetchBoardLabels, fetchCardLabels])
+
+  const handleLabelClick = (event) => {
+    setLabelAnchorEl(event.currentTarget)
+    setLabelView('list')
+    setLabelSearch('')
+  }
+
+  const handleLabelClose = () => {
+    setLabelAnchorEl(null)
+    setLabelView('list')
+  }
+
+  const handleToggleLabel = async (label) => {
+    const isSelected = cardLabels.some(l => l.label_id === label.label_id)
+    if (isSelected) {
+      await removeLabelFromCard(card.card_id, label.label_id)
+    } else {
+      await addLabelToCard(card.card_id, label.label_id)
+    }
+  }
+
+  const handleCreateLabel = async () => {
+    if (!newLabelColor) return
+    try {
+      await createLabel(currentBoard.board_id, newLabelName, newLabelColor)
+      setLabelView('list')
+      setNewLabelName('')
+      setNewLabelColor('')
+    } catch (error) {
+      console.error('Failed to create label:', error)
+    }
+  }
+
+  const handleUpdateLabel = async () => {
+    if (!editingLabel || !newLabelColor) return
+    try {
+      await updateLabel(editingLabel.label_id, newLabelName, newLabelColor)
+      setLabelView('list')
+      setEditingLabel(null)
+      setNewLabelName('')
+      setNewLabelColor('')
+    } catch (error) {
+      console.error('Failed to update label:', error)
+    }
+  }
+
+  const openCreateView = () => {
+    setLabelView('create')
+    setNewLabelName('')
+    setNewLabelColor(BASIC_COLORS[0])
+  }
+
+  const openEditView = (label) => {
+    setLabelView('edit')
+    setEditingLabel(label)
+    setNewLabelName(label.name || '')
+    setNewLabelColor(label.color)
+  }
+
+  const filteredLabels = labels.filter(l => 
+    l.name?.toLowerCase().includes(labelSearch.toLowerCase())
+  )
 
   const handleSendComment = async () => {
     if (!comment.trim()) return
@@ -106,7 +204,7 @@ function CardDetailModal({ open, onClose, card, listName }) {
     >
       <DialogTitle
         sx={{
-          p: 1.5,
+          p: 1,
           display: 'flex',
           flexDirection: 'row-reverse',
           alignItems: 'center',
@@ -127,7 +225,7 @@ function CardDetailModal({ open, onClose, card, listName }) {
           container
           spacing={0}
           alignItems="stretch"
-          sx={{ minHeight: '50vh' }}
+          sx={{ minHeight: '50vh', maxHeight: '80vh' }}
         >
           {/* Left Column */}
             <Box sx={{ 
@@ -135,7 +233,8 @@ function CardDetailModal({ open, onClose, card, listName }) {
                 flexDirection: 'column',
                 width: '50%',
                 p: 2.5,
-                border: '1px solid',
+                borderTop: '1px solid',
+                borderRight: '1px solid',
                 borderColor: 'trello.commentPanelBorder',
               }} >
               {/* Header Section */}
@@ -159,6 +258,57 @@ function CardDetailModal({ open, onClose, card, listName }) {
                   </Typography>
                 </Box>
               </Box>
+
+              {/* Action Buttons */}
+              <Box sx={{ mb: 4, ml: 5, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button startIcon={<AddIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}>Add</Button>
+                <Button 
+                  startIcon={<LabelIcon />} 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={handleLabelClick}
+                  sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}
+                >
+                  Labels
+                </Button>
+                <Button startIcon={<CheckBoxIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}>Checklist</Button>
+                <Button startIcon={<PersonIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}>Members</Button>
+                <Button startIcon={<AttachFileIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}>Attachment</Button>
+              </Box>
+
+              {/* Labels Section */}
+              {cardLabels.length > 0 && (
+                <Box sx={{ mb: 4, ml: 5 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary', fontWeight: 600 }}>
+                    Labels
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {cardLabels.map((label) => (
+                      <Chip
+                        key={label.label_id}
+                        label={label.name}
+                        sx={{ 
+                          bgcolor: label.color, 
+                          color: '#fff',
+                          fontWeight: 500,
+                          borderRadius: '4px',
+                          height: '32px',
+                          '&:hover': { opacity: 0.85 }
+                        }}
+                        onClick={handleLabelClick}
+                      />
+                    ))}
+                    <IconButton 
+                      size="small" 
+                      sx={{ bgcolor: 'trello.inputBg', borderRadius: '4px', width: 32, height: 32 }}
+                      onClick={handleLabelClick}
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
+              )}
+
               {/* Due Date Section */}
               <Box sx={{ mb: 4, display: 'flex', gap: 2 }}>
                 <AccessTimeIcon sx={{ mt: 0.5, color: 'text.secondary' }} />
@@ -230,7 +380,7 @@ function CardDetailModal({ open, onClose, card, listName }) {
           <Box
             sx={{
               bgcolor: 'trello.commentPanelBg',
-              border: '1px solid',
+              borderTop: '1px solid',
               borderColor: 'trello.commentPanelBorder',
               borderLeft: 'none',
               p: 2.5,
@@ -307,6 +457,187 @@ function CardDetailModal({ open, onClose, card, listName }) {
           </Box>
         </Grid>
       </DialogContent>
+
+      {/* Labels Popover */}
+      <Popover
+        open={Boolean(labelAnchorEl)}
+        anchorEl={labelAnchorEl}
+        onClose={handleLabelClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: { width: 300, p: 2 }
+        }}
+      >
+        {labelView === 'list' && (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, position: 'relative' }}>
+              <Typography variant="subtitle1" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 600 }}>
+                Labels
+              </Typography>
+              <IconButton size="small" onClick={handleLabelClose} sx={{ position: 'absolute', right: -8, top: -8 }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Search labels..."
+              value={labelSearch}
+              onChange={(e) => setLabelSearch(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+            
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 1, display: 'block' }}>
+              Labels
+            </Typography>
+            
+            <List sx={{ p: 0, mb: 2 }}>
+              {filteredLabels.map((label) => {
+                const isChecked = cardLabels.some(l => l.label_id === label.label_id)
+                return (
+                  <ListItem key={label.label_id} disablePadding sx={{ mb: 0.5 }}>
+                    <ListItemButton 
+                      onClick={() => handleToggleLabel(label)}
+                      sx={{ p: 0, borderRadius: 1, overflow: 'hidden' }}
+                    >
+                      <Box sx={{ 
+                        width: '100%', 
+                        height: 32, 
+                        bgcolor: label.color, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        px: 1.5,
+                        borderRadius: 1,
+                        transition: 'opacity 0.2s',
+                        '&:hover': { opacity: 0.8 }
+                      }}>
+                        <Typography sx={{ flexGrow: 1, color: '#fff', fontWeight: 500, fontSize: '0.875rem' }}>
+                          {label.name}
+                        </Typography>
+                        {isChecked && <CheckBoxIcon sx={{ color: '#fff', fontSize: 18 }} />}
+                      </Box>
+                    </ListItemButton>
+                    <IconButton 
+                      size="small" 
+                      sx={{ ml: 0.5 }}
+                      onClick={() => openEditView(label)}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </ListItem>
+                )
+              })}
+            </List>
+            
+            <Button 
+              fullWidth 
+              variant="contained" 
+              sx={{ bgcolor: 'trello.inputBg', color: 'text.primary', '&:hover': { bgcolor: 'trello.inputBorder' } }}
+              onClick={openCreateView}
+            >
+              Create a new label
+            </Button>
+          </>
+        )}
+
+        {(labelView === 'create' || labelView === 'edit') && (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, position: 'relative' }}>
+              <IconButton size="small" onClick={() => setLabelView('list')} sx={{ position: 'absolute', left: -8, top: -8 }}>
+                <ArrowBackIcon fontSize="small" />
+              </IconButton>
+              <Typography variant="subtitle1" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 600 }}>
+                {labelView === 'create' ? 'Create label' : 'Edit label'}
+              </Typography>
+              <IconButton size="small" onClick={handleLabelClose} sx={{ position: 'absolute', right: -8, top: -8 }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ 
+              height: 100, 
+              bgcolor: 'trello.inputBg', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              mb: 2,
+              borderRadius: 1
+            }}>
+              <Box sx={{ 
+                bgcolor: newLabelColor, 
+                px: 2, 
+                py: 0.5, 
+                borderRadius: 1, 
+                minWidth: 40, 
+                height: 32,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Typography sx={{ color: '#fff', fontWeight: 500 }}>{newLabelName || 'Title'}</Typography>
+              </Box>
+            </Box>
+
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block' }}>
+              Title
+            </Typography>
+            <TextField
+              fullWidth
+              size="small"
+              value={newLabelName}
+              onChange={(e) => setNewLabelName(e.target.value)}
+              sx={{ mb: 2 }}
+            />
+
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block' }}>
+              Select a color
+            </Typography>
+            <Grid container spacing={1} sx={{ mb: 2 }}>
+              {BASIC_COLORS.map((color) => (
+                <Grid item xs={4} key={color}>
+                  <Box
+                    onClick={() => setNewLabelColor(color)}
+                    sx={{
+                      height: 32,
+                      bgcolor: color,
+                      borderRadius: 1,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      '&:hover': { opacity: 0.8 },
+                      border: newLabelColor === color ? '2px solid #0079bf' : 'none'
+                    }}
+                  >
+                    {newLabelColor === color && <CheckBoxIcon sx={{ color: '#fff', fontSize: 18 }} />}
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Button 
+                variant="contained" 
+                onClick={labelView === 'create' ? handleCreateLabel : handleUpdateLabel}
+              >
+                {labelView === 'create' ? 'Create' : 'Save'}
+              </Button>
+              {labelView === 'edit' && (
+                <Button color="error" onClick={() => {/* Handle delete */}}>Delete</Button>
+              )}
+            </Box>
+          </>
+        )}
+      </Popover>
+
     </Dialog>
   )
 }

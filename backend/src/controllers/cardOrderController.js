@@ -1,27 +1,17 @@
-import mssql from 'mssql';
-import { pool } from '../libs/db.js';
+import * as CardModel from '../models/Card.js';
 
 export const updateCardOrder = async (req, res) => {
     const { id } = req.params;
     const { listId, position } = req.body;
     
     try {
-        const result = await pool.request()
-            .input('cardId', mssql.UniqueIdentifier, id)
-            .input('listId', mssql.UniqueIdentifier, listId)
-            .input('position', mssql.Float, position)
-            .query(`
-                UPDATE Card
-                SET list_id = @listId, position = @position
-                OUTPUT INSERTED.*
-                WHERE card_id = @cardId
-            `);
+        const updatedCard = await CardModel.updateCardPosition(id, listId, position);
             
-        if (result.recordset.length === 0) {
+        if (!updatedCard) {
             return res.status(404).json({ message: 'Card not found' });
         }
         
-        res.json(result.recordset[0]);
+        res.json(updatedCard);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error updating card order' });

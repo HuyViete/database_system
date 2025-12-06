@@ -1,24 +1,17 @@
 import mssql from 'mssql';
 import { pool } from '../libs/db.js';
+import * as BoardModel from '../models/Board.js';
+import * as WorkspaceModel from '../models/Workspace.js';
+import * as ListModel from '../models/List.js';
+import * as LabelModel from '../models/Label.js';
+import * as CardModel from '../models/Card.js';
 
 export const getBoards = async (req, res) => {
     const userId = req.user.user_id;
     
     try {
-        const result = await pool.request()
-            .input('userId', mssql.UniqueIdentifier, userId)
-            .query(`
-                SELECT DISTINCT b.* 
-                FROM Board b
-                LEFT JOIN Board_Member bm ON b.board_id = bm.board_id
-                LEFT JOIN Workspace_Member wm ON b.workspace_id = wm.workspace_id
-                WHERE 
-                    bm.member_id = @userId 
-                    OR (wm.member_id = @userId AND b.visibility = 'workspace')
-                ORDER BY b.time_updated DESC
-            `);
-            
-        res.json(result.recordset);
+        const boards = await BoardModel.getBoardsByUserId(userId);
+        res.json(boards);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error fetching boards' });
@@ -39,80 +32,30 @@ export const createBoard = async (req, res) => {
         // If no workspace provided, find or create a default one
         if (!targetWorkspaceId) {
             // Check if user has any workspace
-            const wsCheck = await pool.request()
-                .input('userId', mssql.UniqueIdentifier, userId)
-                .query(`
-                    SELECT TOP 1 w.workspace_id 
-                    FROM Workspace w
-                    JOIN Workspace_Member wm ON w.workspace_id = wm.workspace_id
-                    WHERE wm.member_id = @userId
-                `);
+            const existingWorkspace = await WorkspaceModel.getWorkspaceByMemberId(userId);
                 
-            if (wsCheck.recordset.length > 0) {
-                targetWorkspaceId = wsCheck.recordset[0].workspace_id;
+            if (existingWorkspace) {
+                targetWorkspaceId = existingWorkspace.workspace_id;
             } else {
                 // Create a new default workspace
-                const wsRequest = new mssql.Request(transaction);
-                const wsResult = await wsRequest
-                    .input('name', mssql.NVarChar, 'Trello Workspace')
-                    .input('visibility', mssql.VarChar, 'private')
-                    .query(`
-                        INSERT INTO Workspace (name, visibility)
-                        OUTPUT INSERTED.workspace_id
-                        VALUES (@name, @visibility)
-                    `);
-                targetWorkspaceId = wsResult.recordset[0].workspace_id;
+                targetWorkspaceId = await WorkspaceModel.createWorkspace(transaction, 'Trello Workspace', 'private');
                 
                 // Add user to workspace
-                const wmRequest = new mssql.Request(transaction);
-                await wmRequest
-                    .input('workspaceId', mssql.UniqueIdentifier, targetWorkspaceId)
-                    .input('memberId', mssql.UniqueIdentifier, userId)
-                    .input('role', mssql.VarChar, 'Admin')
-                    .query(`
-                        INSERT INTO Workspace_Member (workspace_id, member_id, role)
-                        VALUES (@workspaceId, @memberId, @role)
-                    `);
+                await WorkspaceModel.addWorkspaceMember(transaction, targetWorkspaceId, userId, 'Admin');
             }
         }
         
         // Create Board
-        const boardRequest = new mssql.Request(transaction);
-        const boardResult = await boardRequest
-            .input('workspaceId', mssql.UniqueIdentifier, targetWorkspaceId)
-            .input('name', mssql.NVarChar, name)
-            .input('visibility', mssql.VarChar, 'private')
-            .input('backgroundColor', mssql.VarChar, background_color || '#0079bf')
-            .input('backgroundImg', mssql.VarChar, background_img || null)
-            .query(`
-                INSERT INTO Board (workspace_id, name, visibility, background_color, background_img)
-                OUTPUT INSERTED.board_id
-                VALUES (@workspaceId, @name, @visibility, @backgroundColor, @backgroundImg)
-            `);
-            
-        const boardId = boardResult.recordset[0].board_id;
+        const boardId = await BoardModel.createBoard(transaction, targetWorkspaceId, name, 'private', background_color || '#0079bf', background_img || null);
         
         // Add user to Board
-        const bmRequest = new mssql.Request(transaction);
-        await bmRequest
-            .input('boardId', mssql.UniqueIdentifier, boardId)
-            .input('memberId', mssql.UniqueIdentifier, userId)
-            .input('role', mssql.VarChar, 'Admin')
-            .query(`
-                INSERT INTO Board_Member (board_id, member_id, role)
-                VALUES (@boardId, @memberId, @role)
-            `);
+        await BoardModel.addBoardMember(transaction, boardId, userId, 'Admin');
             
         // Create default lists (To Do, Doing, Done)
-        const listRequest = new mssql.Request(transaction);
-        await listRequest
-            .input('boardId', mssql.UniqueIdentifier, boardId)
-            .query(`
-                INSERT INTO List (board_id, name, position) VALUES 
-                (@boardId, 'To Do', 0),
-                (@boardId, 'Doing', 1),
-                (@boardId, 'Done', 2)
-            `);
+        await ListModel.createDefaultLists(transaction, boardId);
+
+        // Create default labels
+        await LabelModel.createDefaultLabels(transaction, boardId);
 
         await transaction.commit();
         
@@ -139,53 +82,15 @@ export const getBoard = async (req, res) => {
     const userId = req.user.user_id;
     
     try {
-        // Check access
-        const accessCheck = await pool.request()
-            .input('boardId', mssql.UniqueIdentifier, id)
-            .input('userId', mssql.UniqueIdentifier, userId)
-            .query(`
-                SELECT 1 FROM Board_Member WHERE board_id = @boardId AND member_id = @userId
-                UNION
-                SELECT 1 FROM Board b 
-                JOIN Workspace_Member wm ON b.workspace_id = wm.workspace_id
-                WHERE b.board_id = @boardId AND wm.member_id = @userId AND b.visibility = 'workspace'
-                UNION
-                SELECT 1 FROM Board WHERE board_id = @boardId AND visibility = 'public'
-            `);
-            
-        if (accessCheck.recordset.length === 0) {
-            return res.status(403).json({ message: 'Access denied' });
+        const board = await BoardModel.getBoardById(id, userId);
+        
+        if (!board) {
+            return res.status(403).json({ message: 'Access denied or board not found' });
         }
         
-        // Get Board Details
-        const boardResult = await pool.request()
-            .input('boardId', mssql.UniqueIdentifier, id)
-            .query(`SELECT * FROM Board WHERE board_id = @boardId`);
-            
-        const board = boardResult.recordset[0];
+        const lists = await ListModel.getListsByBoardId(id);
+        const cards = await CardModel.getCardsByBoardId(id);
         
-        // Get Lists
-        const listsResult = await pool.request()
-            .input('boardId', mssql.UniqueIdentifier, id)
-            .query(`SELECT * FROM List WHERE board_id = @boardId ORDER BY position ASC`);
-            
-        const lists = listsResult.recordset;
-        
-        // Get Cards for all lists
-        // We can do this in one query or loop. One query is better.
-        const cardsResult = await pool.request()
-            .input('boardId', mssql.UniqueIdentifier, id)
-            .query(`
-                SELECT c.* 
-                FROM Card c
-                JOIN List l ON c.list_id = l.list_id
-                WHERE l.board_id = @boardId
-                ORDER BY c.position ASC
-            `);
-            
-        const cards = cardsResult.recordset;
-        
-        // Assemble the data
         const listsWithCards = lists.map(list => ({
             ...list,
             cards: cards.filter(card => card.list_id === list.list_id)
@@ -201,54 +106,16 @@ export const getBoard = async (req, res) => {
 
 export const updateBoard = async (req, res) => {
     const { id } = req.params;
-    const { name, visibility, background_color, background_img } = req.body;
+    const { name, visibility, background_color } = req.body;
     
     try {
-        const request = pool.request()
-            .input('boardId', mssql.UniqueIdentifier, id);
-            
-        let updateFields = [];
+        const updatedBoard = await BoardModel.updateBoard(id, name, visibility, background_color);
         
-        if (name) {
-            request.input('name', mssql.NVarChar, name);
-            updateFields.push("name = @name");
-        }
-        
-        if (visibility) {
-            request.input('visibility', mssql.VarChar, visibility);
-            updateFields.push("visibility = @visibility");
-        }
-        
-        if (background_color) {
-            request.input('backgroundColor', mssql.VarChar, background_color);
-            updateFields.push("background_color = @backgroundColor");
-        }
-        
-        if (background_img !== undefined) { // Allow null/empty string to clear it
-            request.input('backgroundImg', mssql.VarChar, background_img);
-            updateFields.push("background_img = @backgroundImg");
-        }
-        
-        if (updateFields.length === 0) {
-             return res.status(400).json({ message: 'No fields to update' });
-        }
-        
-        updateFields.push("time_updated = GETDATE()");
-        
-        const query = `
-            UPDATE Board
-            SET ${updateFields.join(', ')}
-            OUTPUT INSERTED.*
-            WHERE board_id = @boardId
-        `;
-        
-        const result = await request.query(query);
-            
-        if (result.recordset.length === 0) {
+        if (!updatedBoard) {
             return res.status(404).json({ message: 'Board not found' });
         }
         
-        res.json(result.recordset[0]);
+        res.json(updatedBoard);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Error updating board' });
@@ -259,18 +126,9 @@ export const getWorkspace = async (req, res) => {
     const userId = req.user.user_id;
     
     try {
-        const result = await pool.request()
-            .input('userId', mssql.UniqueIdentifier, userId)
-            .query(`
-                SELECT TOP 1 w.* 
-                FROM Workspace w
-                JOIN Workspace_Member wm ON w.workspace_id = wm.workspace_id
-                WHERE wm.member_id = @userId
-            `);
-            
-        if (result.recordset.length > 0) {
-            const workspace = result.recordset[0];
-            
+        let workspace = await WorkspaceModel.getWorkspaceByMemberId(userId);
+        
+        if (workspace) {
             res.json(workspace);
         } else {
              // If no workspace found, create a default one "Trello Workspace"
@@ -278,30 +136,14 @@ export const getWorkspace = async (req, res) => {
              await transaction.begin();
              
              try {
-                const wsRequest = new mssql.Request(transaction);
-                const wsResult = await wsRequest
-                    .input('name', mssql.NVarChar, 'Trello Workspace')
-                    .input('visibility', mssql.VarChar, 'private')
-                    .query(`
-                        INSERT INTO Workspace (name, visibility)
-                        OUTPUT INSERTED.*
-                        VALUES (@name, @visibility)
-                    `);
+                const workspaceId = await WorkspaceModel.createWorkspace(transaction, 'Trello Workspace', 'private');
+                await WorkspaceModel.addWorkspaceMember(transaction, workspaceId, userId, 'Admin');
                 
-                const newWorkspace = wsResult.recordset[0];
-                
-                const wmRequest = new mssql.Request(transaction);
-                await wmRequest
-                    .input('workspaceId', mssql.UniqueIdentifier, newWorkspace.workspace_id)
-                    .input('memberId', mssql.UniqueIdentifier, userId)
-                    .input('role', mssql.VarChar, 'Admin')
-                    .query(`
-                        INSERT INTO Workspace_Member (workspace_id, member_id, role)
-                        VALUES (@workspaceId, @memberId, @role)
-                    `);
-                    
                 await transaction.commit();
-                res.json(newWorkspace);
+                
+                // Fetch the newly created workspace to return it
+                workspace = await WorkspaceModel.getWorkspaceById(workspaceId);
+                res.json(workspace);
              } catch (err) {
                  await transaction.rollback();
                  console.error(`[getWorkspace] Failed to create default workspace:`, err);
@@ -320,34 +162,20 @@ export const updateWorkspace = async (req, res) => {
     const userId = req.user.user_id;
 
     try {
-        // Verify user is a member of the workspace (and ideally admin, but for now just member)
-        const checkMember = await pool.request()
-            .input('workspaceId', mssql.UniqueIdentifier, id)
-            .input('userId', mssql.UniqueIdentifier, userId)
-            .query(`
-                SELECT 1 FROM Workspace_Member 
-                WHERE workspace_id = @workspaceId AND member_id = @userId
-            `);
+        // Verify user is a member of the workspace
+        const isMember = await WorkspaceModel.isWorkspaceMember(id, userId);
 
-        if (checkMember.recordset.length === 0) {
+        if (!isMember) {
             return res.status(403).json({ message: 'Not authorized to update this workspace' });
         }
 
-        const result = await pool.request()
-            .input('workspaceId', mssql.UniqueIdentifier, id)
-            .input('name', mssql.NVarChar, name)
-            .query(`
-                UPDATE Workspace
-                SET name = @name
-                OUTPUT INSERTED.*
-                WHERE workspace_id = @workspaceId
-            `);
+        const updatedWorkspace = await WorkspaceModel.updateWorkspace(id, name);
 
-        if (result.recordset.length === 0) {
+        if (!updatedWorkspace) {
             return res.status(404).json({ message: 'Workspace not found' });
         }
 
-        res.json(result.recordset[0]);
+        res.json(updatedWorkspace);
     } catch (error) {
         console.error('[updateWorkspace] Error:', error);
         res.status(500).json({ message: 'Error updating workspace' });

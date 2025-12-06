@@ -49,7 +49,7 @@ function AppHeader() {
 
   return (
     <>
-      <AppBar position="static" sx={{ bgcolor: 'trello.appBar', borderBottom: '1px solid', borderColor: 'trello.border', boxShadow: 'none' }}>
+      <AppBar position="sticky" sx={{ bgcolor: 'trello.appBar', borderBottom: '1px solid', borderColor: 'trello.border', boxShadow: 'none' }}>
         <Toolbar variant="dense" sx={{ minHeight: '48px !important', px: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {/* Left Side */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

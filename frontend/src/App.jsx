@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Board from './pages/Board'
 import Dashboard from './pages/Dashboard'
+import Member from './pages/Member'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuthStore } from './stores/useAuthStore'
 
@@ -33,6 +34,7 @@ export default function App() {
           
           <Route element={<ProtectedRoute />}>
             <Route path='/dashboard' element={<Dashboard />} />
+            <Route path='/members' element={<Member />} />
             <Route path='/board/:id' element={<Board />} />
           </Route>
 
