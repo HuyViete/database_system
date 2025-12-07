@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function getChecklistsByCardId(cardId) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
+        .input('cardId', mssql.VarChar, cardId)
         .query(`
             SELECT c.*, 
                    (SELECT * FROM ChecklistItem ci WHERE ci.checklist_id = c.checklist_id FOR JSON PATH) as items
@@ -21,7 +21,7 @@ export async function getChecklistsByCardId(cardId) {
 
 export async function createChecklist(cardId, name) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
+        .input('cardId', mssql.VarChar, cardId)
         .input('name', mssql.NVarChar, name)
         .query(`
             INSERT INTO Checklist (card_id, name, position)
@@ -33,13 +33,13 @@ export async function createChecklist(cardId, name) {
 
 export async function deleteChecklist(checklistId) {
     await pool.request()
-        .input('checklistId', mssql.UniqueIdentifier, checklistId)
+        .input('checklistId', mssql.VarChar, checklistId)
         .query('DELETE FROM Checklist WHERE checklist_id = @checklistId');
 }
 
 export async function createChecklistItem(checklistId, description) {
     const result = await pool.request()
-        .input('checklistId', mssql.UniqueIdentifier, checklistId)
+        .input('checklistId', mssql.VarChar, checklistId)
         .input('description', mssql.NVarChar, description)
         .query(`
             INSERT INTO ChecklistItem (checklist_id, description, position)
@@ -51,7 +51,7 @@ export async function createChecklistItem(checklistId, description) {
 
 export async function updateChecklistItem(itemId, description, isCompleted) {
     const request = pool.request()
-        .input('itemId', mssql.UniqueIdentifier, itemId);
+        .input('itemId', mssql.VarChar, itemId);
     
     let updates = [];
     if (description !== undefined) {
@@ -78,6 +78,6 @@ export async function updateChecklistItem(itemId, description, isCompleted) {
 
 export async function deleteChecklistItem(itemId) {
     await pool.request()
-        .input('itemId', mssql.UniqueIdentifier, itemId)
+        .input('itemId', mssql.VarChar, itemId)
         .query('DELETE FROM ChecklistItem WHERE item_id = @itemId');
 }

@@ -16,7 +16,7 @@ export async function getMonitorByToken(token) {
 export async function createMonitor(transaction, userId, token) {
     const request = new mssql.Request(transaction);
     await request
-        .input('monitorId', mssql.UniqueIdentifier, userId)
+        .input('monitorId', mssql.VarChar, userId)
         .input('token', mssql.VarChar, token)
         .query(`
             INSERT INTO Monitor (monitor_id, token)

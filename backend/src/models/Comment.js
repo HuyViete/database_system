@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function getCommentsByCardId(cardId) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
+        .input('cardId', mssql.VarChar, cardId)
         .query(`
             SELECT 
                 c.comment_id,
@@ -26,8 +26,8 @@ export async function getCommentsByCardId(cardId) {
 
 export async function createComment(cardId, memberId, text) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
-        .input('memberId', mssql.UniqueIdentifier, memberId)
+        .input('cardId', mssql.VarChar, cardId)
+        .input('memberId', mssql.VarChar, memberId)
         .input('text', mssql.NVarChar, text)
         .query(`
             INSERT INTO Comment (card_id, member_id, text)
@@ -39,7 +39,7 @@ export async function createComment(cardId, memberId, text) {
 
 export async function getCommentById(commentId) {
     const result = await pool.request()
-        .input('commentId', mssql.UniqueIdentifier, commentId)
+        .input('commentId', mssql.VarChar, commentId)
         .query(`
             SELECT 
                 c.comment_id,
@@ -61,14 +61,14 @@ export async function getCommentById(commentId) {
 
 export async function getCommentOwner(commentId) {
     const result = await pool.request()
-        .input('commentId', mssql.UniqueIdentifier, commentId)
+        .input('commentId', mssql.VarChar, commentId)
         .query('SELECT member_id FROM Comment WHERE comment_id = @commentId');
     return result.recordset[0] ? result.recordset[0].member_id : null;
 }
 
 export async function updateComment(commentId, text) {
     const result = await pool.request()
-        .input('commentId', mssql.UniqueIdentifier, commentId)
+        .input('commentId', mssql.VarChar, commentId)
         .input('text', mssql.NVarChar, text)
         .query(`
             UPDATE Comment
@@ -81,7 +81,7 @@ export async function updateComment(commentId, text) {
 
 export async function deleteComment(commentId) {
     const result = await pool.request()
-        .input('commentId', mssql.UniqueIdentifier, commentId)
+        .input('commentId', mssql.VarChar, commentId)
         .query('DELETE FROM Comment WHERE comment_id = @commentId');
     return result.rowsAffected[0] > 0;
 }

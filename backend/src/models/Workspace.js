@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function getWorkspaceByMemberId(userId) {
     const result = await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .query(`
             SELECT TOP 1 w.* 
             FROM Workspace w
@@ -29,8 +29,8 @@ export async function createWorkspace(transaction, name, visibility) {
 export async function addWorkspaceMember(transaction, workspaceId, memberId, role) {
     const request = new mssql.Request(transaction);
     await request
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId)
-        .input('memberId', mssql.UniqueIdentifier, memberId)
+        .input('workspaceId', mssql.VarChar, workspaceId)
+        .input('memberId', mssql.VarChar, memberId)
         .input('role', mssql.VarChar, role)
         .query(`
             INSERT INTO Workspace_Member (workspace_id, member_id, role)
@@ -40,14 +40,14 @@ export async function addWorkspaceMember(transaction, workspaceId, memberId, rol
 
 export async function getWorkspaceById(workspaceId) {
     const result = await pool.request()
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId)
+        .input('workspaceId', mssql.VarChar, workspaceId)
         .query('SELECT * FROM Workspace WHERE workspace_id = @workspaceId');
     return result.recordset[0];
 }
 
 export async function updateWorkspace(workspaceId, name, description, visibility) {
     const request = pool.request()
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId);
+        .input('workspaceId', mssql.VarChar, workspaceId);
         
     let updateFields = [];
     if (name) {
@@ -80,7 +80,7 @@ export async function updateWorkspace(workspaceId, name, description, visibility
 
 export async function getWorkspaceMembers(workspaceId) {
     const result = await pool.request()
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId)
+        .input('workspaceId', mssql.VarChar, workspaceId)
         .query(`
             SELECT 
                 u.user_id,
@@ -105,8 +105,8 @@ export async function getWorkspaceMembers(workspaceId) {
 
 export async function isWorkspaceMember(workspaceId, userId) {
     const result = await pool.request()
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId)
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('workspaceId', mssql.VarChar, workspaceId)
+        .input('userId', mssql.VarChar, userId)
         .query(`
             SELECT 1 FROM Workspace_Member 
             WHERE workspace_id = @workspaceId AND member_id = @userId

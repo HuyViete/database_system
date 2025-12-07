@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function createList(boardId, name) {
     const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .input('name', mssql.NVarChar, name)
         .query(`
             DECLARE @NewPosition FLOAT;
@@ -21,7 +21,7 @@ export async function createList(boardId, name) {
 export async function createDefaultLists(transaction, boardId) {
     const request = new mssql.Request(transaction);
     await request
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .query(`
             INSERT INTO List (board_id, name, position) VALUES 
             (@boardId, 'To Do', 0),
@@ -32,7 +32,7 @@ export async function createDefaultLists(transaction, boardId) {
 
 export async function getListsByBoardId(boardId) {
     const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .query(`
             SELECT * FROM List 
             WHERE board_id = @boardId 
@@ -43,7 +43,7 @@ export async function getListsByBoardId(boardId) {
 
 export async function updateList(listId, name) {
     const result = await pool.request()
-        .input('listId', mssql.UniqueIdentifier, listId)
+        .input('listId', mssql.VarChar, listId)
         .input('name', mssql.NVarChar, name)
         .query(`
             UPDATE List
@@ -57,18 +57,18 @@ export async function updateList(listId, name) {
 export async function deleteList(listId) {
     // First delete all cards in the list
     await pool.request()
-        .input('listId', mssql.UniqueIdentifier, listId)
+        .input('listId', mssql.VarChar, listId)
         .query('DELETE FROM Card WHERE list_id = @listId');
 
     const result = await pool.request()
-        .input('listId', mssql.UniqueIdentifier, listId)
+        .input('listId', mssql.VarChar, listId)
         .query('DELETE FROM List WHERE list_id = @listId');
     return result.rowsAffected[0] > 0;
 }
 
 export async function updateListPosition(listId, position) {
     const result = await pool.request()
-        .input('listId', mssql.UniqueIdentifier, listId)
+        .input('listId', mssql.VarChar, listId)
         .input('position', mssql.Float, position)
         .query(`
             UPDATE List 

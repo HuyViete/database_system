@@ -3,9 +3,9 @@ import mssql from 'mssql'
 
 export async function createInvitation(inviterId, emailTarget, workspaceId, token) {
     const result = await pool.request()
-        .input('inviterId', mssql.UniqueIdentifier, inviterId)
+        .input('inviterId', mssql.VarChar, inviterId)
         .input('emailTarget', mssql.VarChar, emailTarget)
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId)
+        .input('workspaceId', mssql.VarChar, workspaceId)
         .input('token', mssql.VarChar, token)
         .query(`
             INSERT INTO Invitation (inviter_id, email_target, workspace_id, token, status)
@@ -17,7 +17,7 @@ export async function createInvitation(inviterId, emailTarget, workspaceId, toke
 
 export async function getInvitationsByWorkspaceId(workspaceId) {
     const result = await pool.request()
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId)
+        .input('workspaceId', mssql.VarChar, workspaceId)
         .query(`
             SELECT i.*, u.username as inviter_username, u.avatar_url as inviter_avatar
             FROM Invitation i

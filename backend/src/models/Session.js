@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function createSession(userId, token, expiresAt, ipAddress, userAgent) {
     await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .input('token', mssql.VarChar, token)
         .input('expiresAt', mssql.DateTime2, expiresAt)
         .input('ipAddress', mssql.VarChar, ipAddress)
@@ -29,6 +29,6 @@ export async function revokeSession(token) {
 
 export async function revokeAllUserSessions(userId) {
     await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .query('UPDATE Sessions SET is_revoked = 1 WHERE user_id = @userId');
 }

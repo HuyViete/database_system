@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function getBoardsByUserId(userId) {
     const result = await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .query(`
             SELECT DISTINCT b.* 
             FROM Board b
@@ -20,8 +20,8 @@ export async function getBoardsByUserId(userId) {
 export async function getBoardById(boardId, userId) {
     // Check access
     const accessCheck = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('boardId', mssql.VarChar, boardId)
+        .input('userId', mssql.VarChar, userId)
         .query(`
             SELECT 1 FROM Board_Member WHERE board_id = @boardId AND member_id = @userId
             UNION
@@ -35,7 +35,7 @@ export async function getBoardById(boardId, userId) {
     }
     
     const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .query('SELECT * FROM Board WHERE board_id = @boardId');
         
     return result.recordset[0];
@@ -44,7 +44,7 @@ export async function getBoardById(boardId, userId) {
 export async function createBoard(transaction, workspaceId, name, visibility, backgroundColor, backgroundImg) {
     const request = new mssql.Request(transaction);
     const result = await request
-        .input('workspaceId', mssql.UniqueIdentifier, workspaceId)
+        .input('workspaceId', mssql.VarChar, workspaceId)
         .input('name', mssql.NVarChar, name)
         .input('visibility', mssql.VarChar, visibility)
         .input('backgroundColor', mssql.VarChar, backgroundColor)
@@ -60,8 +60,8 @@ export async function createBoard(transaction, workspaceId, name, visibility, ba
 export async function addBoardMember(transaction, boardId, memberId, role) {
     const request = new mssql.Request(transaction);
     await request
-        .input('boardId', mssql.UniqueIdentifier, boardId)
-        .input('memberId', mssql.UniqueIdentifier, memberId)
+        .input('boardId', mssql.VarChar, boardId)
+        .input('memberId', mssql.VarChar, memberId)
         .input('role', mssql.VarChar, role)
         .query(`
             INSERT INTO Board_Member (board_id, member_id, role)
@@ -71,7 +71,7 @@ export async function addBoardMember(transaction, boardId, memberId, role) {
 
 export async function updateBoard(boardId, name, visibility, backgroundColor, backgroundImg) {
     const updates = [];
-    const request = pool.request().input('boardId', mssql.UniqueIdentifier, boardId);
+    const request = pool.request().input('boardId', mssql.VarChar, boardId);
 
     if (name !== undefined) {
         request.input('name', mssql.NVarChar, name);
@@ -107,7 +107,7 @@ export async function updateBoard(boardId, name, visibility, backgroundColor, ba
 
 export async function deleteBoard(boardId) {
     const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .query('DELETE FROM Board WHERE board_id = @boardId');
     return result.rowsAffected[0] > 0;
 }

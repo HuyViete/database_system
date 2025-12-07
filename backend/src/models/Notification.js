@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function createNotification(receiverId, title, message) {
     const result = await pool.request()
-        .input('receiverId', mssql.UniqueIdentifier, receiverId)
+        .input('receiverId', mssql.VarChar, receiverId)
         .input('title', mssql.NVarChar, title)
         .input('message', mssql.NVarChar, message)
         .query(`
@@ -16,7 +16,7 @@ export async function createNotification(receiverId, title, message) {
 
 export async function getNotificationsByUserId(userId) {
     const result = await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .query(`
             SELECT * FROM Notification 
             WHERE receiver_id = @userId 
@@ -27,7 +27,7 @@ export async function getNotificationsByUserId(userId) {
 
 export async function markAsRead(notiId) {
     await pool.request()
-        .input('notiId', mssql.UniqueIdentifier, notiId)
+        .input('notiId', mssql.VarChar, notiId)
         .query(`
             UPDATE Notification 
             SET is_read = 1, time_read = GETDATE() 
@@ -37,7 +37,7 @@ export async function markAsRead(notiId) {
 
 export async function markAllAsRead(userId) {
     await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .query(`
             UPDATE Notification 
             SET is_read = 1, time_read = GETDATE() 

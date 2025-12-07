@@ -3,14 +3,14 @@ import mssql from 'mssql'
 
 export async function getLabelsByBoardId(boardId) {
     const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .query('SELECT * FROM Label WHERE board_id = @boardId');
     return result.recordset;
 }
 
 export async function createLabel(boardId, name, color) {
     const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .input('name', mssql.NVarChar, name)
         .input('color', mssql.VarChar, color)
         .query(`
@@ -23,7 +23,7 @@ export async function createLabel(boardId, name, color) {
 
 export async function updateLabel(labelId, name, color) {
     const result = await pool.request()
-        .input('labelId', mssql.UniqueIdentifier, labelId)
+        .input('labelId', mssql.VarChar, labelId)
         .input('name', mssql.NVarChar, name)
         .input('color', mssql.VarChar, color)
         .query(`
@@ -37,7 +37,7 @@ export async function updateLabel(labelId, name, color) {
 
 export async function deleteLabel(labelId) {
     const result = await pool.request()
-        .input('labelId', mssql.UniqueIdentifier, labelId)
+        .input('labelId', mssql.VarChar, labelId)
         .query('DELETE FROM Label WHERE label_id = @labelId');
     return result.rowsAffected[0] > 0;
 }
@@ -45,7 +45,7 @@ export async function deleteLabel(labelId) {
 export async function createDefaultLabels(transaction, boardId) {
     const request = new mssql.Request(transaction);
     await request
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .query(`
             INSERT INTO Label (board_id, name, color) VALUES 
             (@boardId, '', '#61bd4f'),
@@ -59,7 +59,7 @@ export async function createDefaultLabels(transaction, boardId) {
 
 export async function getLabelsByCardId(cardId) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
+        .input('cardId', mssql.VarChar, cardId)
         .query(`
             SELECT l.* 
             FROM Label l
@@ -71,23 +71,23 @@ export async function getLabelsByCardId(cardId) {
 
 export async function checkLabelOnCard(cardId, labelId) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
-        .input('labelId', mssql.UniqueIdentifier, labelId)
+        .input('cardId', mssql.VarChar, cardId)
+        .input('labelId', mssql.VarChar, labelId)
         .query('SELECT * FROM Card_Label WHERE card_id = @cardId AND label_id = @labelId');
     return result.recordset.length > 0;
 }
 
 export async function addLabelToCard(cardId, labelId) {
     await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
-        .input('labelId', mssql.UniqueIdentifier, labelId)
+        .input('cardId', mssql.VarChar, cardId)
+        .input('labelId', mssql.VarChar, labelId)
         .query('INSERT INTO Card_Label (card_id, label_id) VALUES (@cardId, @labelId)');
 }
 
 export async function removeLabelFromCard(cardId, labelId) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
-        .input('labelId', mssql.UniqueIdentifier, labelId)
+        .input('cardId', mssql.VarChar, cardId)
+        .input('labelId', mssql.VarChar, labelId)
         .query('DELETE FROM Card_Label WHERE card_id = @cardId AND label_id = @labelId');
     return result.rowsAffected[0] > 0;
 }

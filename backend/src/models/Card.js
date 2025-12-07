@@ -3,7 +3,7 @@ import mssql from 'mssql'
 
 export async function createCard(listId, name, position) {
     const result = await pool.request()
-        .input('listId', mssql.UniqueIdentifier, listId)
+        .input('listId', mssql.VarChar, listId)
         .input('name', mssql.NVarChar, name)
         .input('position', mssql.Float, position)
         .query(`
@@ -16,14 +16,14 @@ export async function createCard(listId, name, position) {
 
 export async function getNextCardPosition(listId) {
     const result = await pool.request()
-        .input('listId', mssql.UniqueIdentifier, listId)
+        .input('listId', mssql.VarChar, listId)
         .query(`SELECT ISNULL(MAX(position) + 1, 0) as nextPos FROM Card WHERE list_id = @listId`);
     return result.recordset[0].nextPos;
 }
 
 export async function updateCard(cardId, name, description, dueDate) {
     const request = pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId);
+        .input('cardId', mssql.VarChar, cardId);
         
     let updateFields = [];
     
@@ -55,14 +55,14 @@ export async function updateCard(cardId, name, description, dueDate) {
 
 export async function deleteCard(cardId) {
     const result = await pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
+        .input('cardId', mssql.VarChar, cardId)
         .query('DELETE FROM Card WHERE card_id = @cardId');
     return result.rowsAffected[0] > 0;
 }
 
 export async function getCardsByBoardId(boardId) {
     const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
+        .input('boardId', mssql.VarChar, boardId)
         .query(`
             SELECT c.* 
             FROM Card c
@@ -75,13 +75,13 @@ export async function getCardsByBoardId(boardId) {
 
 export async function updateCardPosition(cardId, listId, position) {
     const request = pool.request()
-        .input('cardId', mssql.UniqueIdentifier, cardId)
+        .input('cardId', mssql.VarChar, cardId)
         .input('position', mssql.Float, position);
         
     let query = "UPDATE Card SET position = @position";
     
     if (listId) {
-        request.input('listId', mssql.UniqueIdentifier, listId);
+        request.input('listId', mssql.VarChar, listId);
         query += ", list_id = @listId";
     }
     

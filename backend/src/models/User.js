@@ -31,7 +31,7 @@ export async function createUser(transaction, username, firstName, lastName, bir
 export async function createMember(transaction, userId, email, passwordHash, status) {
     const request = new mssql.Request(transaction);
     await request
-        .input('memberId', mssql.UniqueIdentifier, userId)
+        .input('memberId', mssql.VarChar, userId)
         .input('email', mssql.VarChar, email)
         .input('passwordHash', mssql.VarChar, passwordHash)
         .input('status', mssql.VarChar, status)
@@ -55,7 +55,7 @@ export async function getUserByEmail(email) {
 
 export async function getUserById(userId) {
     const result = await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .query(`
             SELECT u.user_id, u.username, u.first_name, u.last_name, u.avatar_url, m.login_email, u.time_created as joined_date, m.last_login
             FROM [User] u
@@ -67,7 +67,7 @@ export async function getUserById(userId) {
 
 export async function updateLastLogin(userId) {
     await pool.request()
-        .input('userId', mssql.UniqueIdentifier, userId)
+        .input('userId', mssql.VarChar, userId)
         .query('UPDATE Member SET last_login = GETDATE() WHERE member_id = @userId');
 }
 
