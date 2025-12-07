@@ -382,3 +382,142 @@ CREATE TABLE Notification (
     FOREIGN KEY (receiver_id) REFERENCES [User](user_id) ON DELETE CASCADE
 );
 GO
+
+
+
+-- Trigger: Set time_expired to 7 days from now on insert or update
+CREATE TRIGGER Invitation_SetTimeExpired
+ON Invitation
+AFTER INSERT, UPDATE
+AS
+BEGIN
+    UPDATE Invitation
+    SET time_expired = DATEADD(day, 7, GETDATE())
+    FROM Invitation i
+    JOIN inserted ins ON i.invitation_id = ins.invitation_id;
+END
+GO
+
+
+-- Trigger: Activate member if status is inactive after update
+CREATE TRIGGER Member_Activate
+ON Member
+AFTER UPDATE
+AS
+BEGIN
+    IF EXISTS (SELECT 1 FROM inserted WHERE status = 'inactive')
+    BEGIN
+        UPDATE m
+        SET m.status = 'active'
+        FROM Member m
+        JOIN inserted i ON m.member_id = i.member_id
+        WHERE i.status = 'inactive';
+    END
+END
+GO
+
+
+-- Procedure: Get members by status
+CREATE PROCEDURE GetMembersByStatus
+    @status VARCHAR(20),
+    @member_count INT OUTPUT
+AS
+BEGIN
+    SELECT m.member_id, m.login_email, m.status
+    FROM Member m
+    WHERE m.status = @status
+    ORDER BY m.login_email;
+
+    SELECT @member_count = COUNT(*)
+    FROM Member m
+    WHERE m.status = @status;
+END
+GO
+
+
+-- Procedure: Get Member Count for Workspace having more than a specified number of members
+CREATE PROCEDURE GetWorkspaceMemberCount
+    @min_count INT
+AS
+BEGIN
+    SELECT w.workspace_id, w.name, COUNT(wm.member_id) AS member_count
+    FROM Workspace w
+    JOIN Workspace_Member wm ON w.workspace_id = wm.workspace_id
+    GROUP BY w.workspace_id
+    ORDER BY member_count DESC
+    HAVING member_count > @min_count;
+END
+GO
+
+
+-- Procedure: Get all members in a workspace
+CREATE PROCEDURE GetAllMembersInWorkspace
+    @workspace_id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SELECT m.member_id, m.login_email, m.status
+    FROM Member m
+    JOIN Workspace_Member wm ON m.member_id = wm.member_id
+    WHERE wm.workspace_id = @workspace_id
+    ORDER BY m.login_email;
+END
+GO
+
+
+-- Function: Calculate percent of completed checklist items in a workspace
+CREATE FUNCTION GetWorkspaceCompletionPercent
+(
+    @workspace_id UNIQUEIDENTIFIER
+)
+RETURNS FLOAT
+AS
+BEGIN
+    DECLARE @total INT, @completed INT;
+
+    SELECT @total = COUNT(ci.item_id)
+    FROM ChecklistItem ci
+    JOIN Checklist cl ON ci.checklist_id = cl.checklist_id
+    WHERE cl.card_id IN (
+        SELECT c.card_id
+        FROM Card c
+        JOIN List l ON c.list_id = l.list_id
+        JOIN Board b ON l.board_id = b.board_id
+        WHERE b.workspace_id = @workspace_id
+    );
+
+    SELECT @completed = COUNT(ci.item_id)
+    FROM ChecklistItem ci
+    JOIN Checklist cl ON ci.checklist_id = cl.checklist_id
+    WHERE cl.card_id IN (
+        SELECT c.card_id
+        FROM Card c
+        JOIN List l ON c.list_id = l.list_id
+        JOIN Board b ON l.board_id = b.board_id
+        WHERE b.workspace_id = @workspace_id
+    )
+    AND ci.is_completed = 1;
+
+    IF @total = 0
+        RETURN 100.0;
+    RETURN (CAST(@completed AS FLOAT) / @total) * 100.0;
+END
+GO
+
+
+-- Function: Get overdue cards count in a workspace
+CREATE FUNCTION GetOverdueCardCountInWorkspace
+(
+    @workspace_id UNIQUEIDENTIFIER
+)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @count INT;
+    SELECT @count = COUNT(*)
+    FROM Card c
+    JOIN List l ON c.list_id = l.list_id
+    WHERE l.board_id IN (SELECT board_id FROM Board WHERE workspace_id = @workspace_id)
+      AND c.is_overdue = 1;
+    RETURN @count;
+END
+GO
