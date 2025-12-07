@@ -106,10 +106,10 @@ export const getBoard = async (req, res) => {
 
 export const updateBoard = async (req, res) => {
     const { id } = req.params;
-    const { name, visibility, background_color } = req.body;
+    const { name, visibility, background_color, background_img } = req.body;
     
     try {
-        const updatedBoard = await BoardModel.updateBoard(id, name, visibility, background_color);
+        const updatedBoard = await BoardModel.updateBoard(id, name, visibility, background_color, background_img);
         
         if (!updatedBoard) {
             return res.status(404).json({ message: 'Board not found' });

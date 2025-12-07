@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useBoardStore } from '../stores/useBoardStore'
+import useNotificationStore from '../stores/useNotificationStore'
 import {
   Box,
   Typography,
@@ -15,13 +16,19 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Badge,
+  Menu,
+  MenuItem,
+  ListItemText,
+  Divider
 } from '@mui/material'
 import {
   Search as SearchIcon,
   Notifications as NotificationsIcon,
   HelpOutline as HelpIcon,
-  Apps as AppsIcon
+  Apps as AppsIcon,
+  Circle as CircleIcon
 } from '@mui/icons-material'
 import ModeSwitcher from './ModeSwitcher'
 
@@ -29,7 +36,33 @@ function AppHeader() {
   const navigate = useNavigate()
   const { user, signOut } = useAuthStore()
   const { createBoard, isCreateBoardOpen, setCreateBoardOpen } = useBoardStore()
+  const { notifications, unreadCount, fetchNotifications, markAsRead, markAllAsRead } = useNotificationStore()
   const [newBoardName, setNewBoardName] = useState('')
+  const [anchorEl, setAnchorEl] = useState(null)
+  const open = Boolean(anchorEl)
+
+  useEffect(() => {
+    fetchNotifications()
+    // Poll for notifications every minute
+    const interval = setInterval(fetchNotifications, 60000)
+    return () => clearInterval(interval)
+  }, [fetchNotifications])
+
+  const handleNotificationClick = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+
+  const handleNotificationClose = () => {
+    setAnchorEl(null)
+  }
+
+  const handleMarkAsRead = (id) => {
+    markAsRead(id)
+  }
+
+  const handleMarkAllAsRead = () => {
+    markAllAsRead()
+  }
 
   const handleCreateBoard = async () => {
     try {
@@ -97,9 +130,69 @@ function AppHeader() {
 
           {/* Right Side */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton size="small" sx={{ color: 'trello.appBarText' }}>
-              <NotificationsIcon />
+            <IconButton 
+              size="small" 
+              sx={{ color: 'trello.appBarText' }}
+              onClick={handleNotificationClick}
+            >
+              <Badge badgeContent={unreadCount} color="error">
+                <NotificationsIcon />
+              </Badge>
             </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={open}
+              onClose={handleNotificationClose}
+              PaperProps={{
+                sx: { width: 320, maxHeight: 400 }
+              }}
+              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+            >
+              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">Notifications</Typography>
+                {unreadCount > 0 && (
+                  <Button size="small" onClick={handleMarkAllAsRead}>
+                    Mark all as read
+                  </Button>
+                )}
+              </Box>
+              <Divider />
+              {notifications.length === 0 ? (
+                <MenuItem disabled>
+                  <ListItemText primary="No notifications" />
+                </MenuItem>
+              ) : (
+                notifications.map((notification) => (
+                  <MenuItem 
+                    key={notification.noti_id} 
+                    onClick={() => handleMarkAsRead(notification.noti_id)}
+                    sx={{ 
+                      bgcolor: notification.is_read ? 'transparent' : 'action.hover',
+                      whiteSpace: 'normal',
+                      alignItems: 'flex-start'
+                    }}
+                  >
+                    {!notification.is_read && (
+                      <CircleIcon sx={{ fontSize: 10, color: 'primary.main', mt: 1, mr: 1 }} />
+                    )}
+                    <ListItemText 
+                      primary={notification.title}
+                      secondary={
+                        <>
+                          <Typography variant="body2" color="text.primary">
+                            {notification.message}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(notification.time_delivered).toLocaleString()}
+                          </Typography>
+                        </>
+                      }
+                    />
+                  </MenuItem>
+                ))
+              )}
+            </Menu>
             <IconButton size="small" sx={{ color: 'trello.appBarText' }}>
               <HelpIcon />
             </IconButton>

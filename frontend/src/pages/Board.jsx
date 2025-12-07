@@ -245,12 +245,6 @@ function Board() {
             </Typography>
           )}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
-            <Button startIcon={<StarBorderIcon />} sx={{ color: 'white' }}>
-              Star
-            </Button>
-            <Button startIcon={<PeopleIcon />} sx={{ color: 'white' }}>
-              Workspace Visible
-            </Button>
             <Button startIcon={<FilterListIcon />} sx={{ color: 'white' }}>
               Filter
             </Button>
@@ -258,7 +252,7 @@ function Board() {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <AvatarGroup>
-            
+
           </AvatarGroup>
           <Button 
             startIcon={<MoreHorizIcon />} 

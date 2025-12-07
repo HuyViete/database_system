@@ -143,27 +143,26 @@ function BoardMenu({ open, onClose, board }) {
       {renderHeader('Change background', () => setCurrentView('main'))}
       <Box sx={{ p: 2 }}>
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Colors</Typography>
-        <Grid container spacing={1} sx={{ mb: 3 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, mb: 3 }}>
           {COLORS.map((color) => (
-            <Grid item xs={4} key={color}>
-              <Box
-                onClick={() => handleColorChange(color)}
-                sx={{
-                  height: 60,
-                  bgcolor: color,
-                  borderRadius: 1,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  '&:hover': { opacity: 0.8 }
-                }}
-              >
-                {board?.background_color === color && <CheckIcon sx={{ color: 'white' }} />}
-              </Box>
-            </Grid>
+            <Box
+              key={color}
+              onClick={() => handleColorChange(color)}
+              sx={{
+                height: 60,
+                bgcolor: color,
+                borderRadius: 1,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                '&:hover': { opacity: 0.8 }
+              }}
+            >
+              {board?.background_color === color && <CheckIcon sx={{ color: 'white' }} />}
+            </Box>
           ))}
-        </Grid>
+        </Box>
 
         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Image URL</Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>

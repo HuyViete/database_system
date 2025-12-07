@@ -42,6 +42,7 @@ import { useBoardStore } from '../stores/useBoardStore'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useCommentStore } from '../stores/useCommentStore'
 import { useLabelStore } from '../stores/useLabelStore'
+import { useChecklistStore } from '../stores/useChecklistStore'
 import Comment from './Comment'
 
 function CardDetailModal({ open, onClose, card, listName }) {
@@ -54,6 +55,7 @@ function CardDetailModal({ open, onClose, card, listName }) {
   const { comments, fetchComments, addComment, editComment, removeComment, clearComments } = useCommentStore()
   const { currentBoard } = useBoardStore()
   const { labels, cardLabels, fetchBoardLabels, fetchCardLabels, createLabel, updateLabel, addLabelToCard, removeLabelFromCard } = useLabelStore()
+  const { checklists, fetchChecklists, createChecklist, deleteChecklist, addItem, updateItem, deleteItem, clearChecklists } = useChecklistStore()
 
   const [labelAnchorEl, setLabelAnchorEl] = useState(null)
   const [labelSearch, setLabelSearch] = useState('')
@@ -61,6 +63,10 @@ function CardDetailModal({ open, onClose, card, listName }) {
   const [editingLabel, setEditingLabel] = useState(null)
   const [newLabelName, setNewLabelName] = useState('')
   const [newLabelColor, setNewLabelColor] = useState('')
+
+  const [checklistAnchorEl, setChecklistAnchorEl] = useState(null)
+  const [newChecklistTitle, setNewChecklistTitle] = useState('Checklist')
+  const [newItemText, setNewItemText] = useState({}) // Map checklistId -> text
 
   const BASIC_COLORS = [
     '#61bd4f', // Green
@@ -78,6 +84,7 @@ function CardDetailModal({ open, onClose, card, listName }) {
       setDueDate(card.due_date ? dayjs(card.due_date) : null)
       if (card.card_id) {
         fetchComments(card.card_id)
+        fetchChecklists(card.card_id)
         if (currentBoard) {
           fetchBoardLabels(currentBoard.board_id)
           fetchCardLabels(card.card_id)
@@ -85,8 +92,9 @@ function CardDetailModal({ open, onClose, card, listName }) {
       }
     } else {
       clearComments()
+      clearChecklists()
     }
-  }, [card, fetchComments, clearComments, currentBoard, fetchBoardLabels, fetchCardLabels])
+  }, [card, fetchComments, clearComments, currentBoard, fetchBoardLabels, fetchCardLabels, fetchChecklists, clearChecklists])
 
   const handleLabelClick = (event) => {
     setLabelAnchorEl(event.currentTarget)
@@ -97,6 +105,67 @@ function CardDetailModal({ open, onClose, card, listName }) {
   const handleLabelClose = () => {
     setLabelAnchorEl(null)
     setLabelView('list')
+  }
+
+  const handleChecklistClick = (event) => {
+    setChecklistAnchorEl(event.currentTarget)
+    setNewChecklistTitle('Checklist')
+  }
+
+  const handleChecklistClose = () => {
+    setChecklistAnchorEl(null)
+  }
+
+  const handleCreateChecklist = async () => {
+    if (!newChecklistTitle.trim()) return
+    try {
+      await createChecklist(card.card_id, newChecklistTitle)
+      handleChecklistClose()
+    } catch (error) {
+      console.error('Failed to create checklist:', error)
+    }
+  }
+
+  const handleDeleteChecklist = async (checklistId) => {
+    if (!window.confirm('Delete this checklist?')) return
+    try {
+      await deleteChecklist(checklistId)
+    } catch (error) {
+      console.error('Failed to delete checklist:', error)
+    }
+  }
+
+  const handleAddItem = async (checklistId) => {
+    const text = newItemText[checklistId]
+    if (!text?.trim()) return
+    try {
+      await addItem(checklistId, text)
+      setNewItemText(prev => ({ ...prev, [checklistId]: '' }))
+    } catch (error) {
+      console.error('Failed to add item:', error)
+    }
+  }
+
+  const handleToggleItem = async (checklistId, itemId, isCompleted) => {
+    try {
+      await updateItem(checklistId, itemId, { is_completed: !isCompleted })
+    } catch (error) {
+      console.error('Failed to toggle item:', error)
+    }
+  }
+
+  const handleDeleteItem = async (checklistId, itemId) => {
+    try {
+      await deleteItem(checklistId, itemId)
+    } catch (error) {
+      console.error('Failed to delete item:', error)
+    }
+  }
+
+  const calculateProgress = (items) => {
+    if (!items || items.length === 0) return 0
+    const completed = items.filter(i => i.is_completed).length
+    return Math.round((completed / items.length) * 100)
   }
 
   const handleToggleLabel = async (label) => {
@@ -271,7 +340,15 @@ function CardDetailModal({ open, onClose, card, listName }) {
                 >
                   Labels
                 </Button>
-                <Button startIcon={<CheckBoxIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}>Checklist</Button>
+                <Button 
+                  startIcon={<CheckBoxIcon />} 
+                  variant="outlined" 
+                  size="small" 
+                  onClick={handleChecklistClick}
+                  sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}
+                >
+                  Checklist
+                </Button>
                 <Button startIcon={<PersonIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}>Members</Button>
                 <Button startIcon={<AttachFileIcon />} variant="outlined" size="small" sx={{ color: 'text.secondary', borderColor: 'trello.border', bgcolor: 'trello.cardBg', textTransform: 'none', '&:hover': { bgcolor: 'trello.cardHover' } }}>Attachment</Button>
               </Box>
@@ -349,7 +426,7 @@ function CardDetailModal({ open, onClose, card, listName }) {
               </Box>
 
               {/* Description Section */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
                 <DescriptionIcon sx={{ mt: 0.5, color: 'text.secondary' }} />
                 <Box sx={{ flexGrow: 1 }}>
                   <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, mb: 2 }}>
@@ -374,6 +451,103 @@ function CardDetailModal({ open, onClose, card, listName }) {
                   />
                 </Box>
               </Box>
+
+              {/* Checklists Section */}
+              {checklists.map((checklist) => {
+                const progress = calculateProgress(checklist.items)
+                return (
+                  <Box key={checklist.checklist_id} sx={{ mb: 4 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                      <CheckBoxIcon sx={{ color: 'text.secondary' }} />
+                      <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, flexGrow: 1 }}>
+                        {checklist.name}
+                      </Typography>
+                      <Button 
+                        size="small" 
+                        sx={{ bgcolor: 'trello.inputBg', color: 'text.primary', textTransform: 'none', '&:hover': { bgcolor: 'trello.inputBorder' } }}
+                        onClick={() => handleDeleteChecklist(checklist.checklist_id)}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                      <Typography variant="caption" color="text.secondary" sx={{ minWidth: 30 }}>
+                        {progress}%
+                      </Typography>
+                      <Box sx={{ flexGrow: 1, height: 8, bgcolor: 'trello.inputBorder', borderRadius: 4, overflow: 'hidden' }}>
+                        <Box sx={{ width: `${progress}%`, height: '100%', bgcolor: progress === 100 ? 'success.main' : 'primary.main', transition: 'width 0.2s' }} />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ ml: 0 }}>
+                      {checklist.items?.map((item) => (
+                        <Box key={item.item_id} sx={{ display: 'flex', alignItems: 'center', mb: 1, '&:hover .delete-item': { opacity: 1 } }}>
+                          <Checkbox 
+                            checked={item.is_completed} 
+                            onChange={() => handleToggleItem(checklist.checklist_id, item.item_id, item.is_completed)}
+                            sx={{ p: 0.5, mr: 1 }}
+                          />
+                          <Typography 
+                            sx={{ 
+                              flexGrow: 1, 
+                              textDecoration: item.is_completed ? 'line-through' : 'none',
+                              color: item.is_completed ? 'text.secondary' : 'text.primary'
+                            }}
+                          >
+                            {item.description}
+                          </Typography>
+                          <IconButton 
+                            size="small" 
+                            className="delete-item"
+                            sx={{ opacity: 0, transition: 'opacity 0.2s' }}
+                            onClick={() => handleDeleteItem(checklist.checklist_id, item.item_id)}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ))}
+                      
+                      <Box sx={{ mt: 1, ml: 4 }}>
+                        {!newItemText[checklist.checklist_id] && newItemText[checklist.checklist_id] !== '' ? (
+                          <Button 
+                            size="small" 
+                            sx={{ bgcolor: 'trello.inputBg', color: 'text.primary', textTransform: 'none', '&:hover': { bgcolor: 'trello.inputBorder' } }}
+                            onClick={() => setNewItemText(prev => ({ ...prev, [checklist.checklist_id]: '' }))}
+                          >
+                            Add an item
+                          </Button>
+                        ) : (
+                          <Box>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              placeholder="Add an item"
+                              autoFocus
+                              value={newItemText[checklist.checklist_id] || ''}
+                              onChange={(e) => setNewItemText(prev => ({ ...prev, [checklist.checklist_id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleAddItem(checklist.checklist_id)
+                              }}
+                              sx={{ mb: 1 }}
+                            />
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                              <Button variant="contained" size="small" onClick={() => handleAddItem(checklist.checklist_id)}>Add</Button>
+                              <IconButton size="small" onClick={() => setNewItemText(prev => {
+                                const newState = { ...prev }
+                                delete newState[checklist.checklist_id]
+                                return newState
+                              })}>
+                                <CloseIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+                )
+              })}
             </Box>
 
           {/* Right Column - Comments */}
@@ -600,28 +774,27 @@ function CardDetailModal({ open, onClose, card, listName }) {
             <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block' }}>
               Select a color
             </Typography>
-            <Grid container spacing={1} sx={{ mb: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, mb: 2 }}>
               {BASIC_COLORS.map((color) => (
-                <Grid item xs={4} key={color}>
-                  <Box
-                    onClick={() => setNewLabelColor(color)}
-                    sx={{
-                      height: 32,
-                      bgcolor: color,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      '&:hover': { opacity: 0.8 },
-                      border: newLabelColor === color ? '2px solid #0079bf' : 'none'
-                    }}
-                  >
-                    {newLabelColor === color && <CheckBoxIcon sx={{ color: '#fff', fontSize: 18 }} />}
-                  </Box>
-                </Grid>
+                <Box
+                  key={color}
+                  onClick={() => setNewLabelColor(color)}
+                  sx={{
+                    height: 32,
+                    bgcolor: color,
+                    borderRadius: 1,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    '&:hover': { opacity: 0.8 },
+                    border: newLabelColor === color ? '2px solid #0079bf' : 'none'
+                  }}
+                >
+                  {newLabelColor === color && <CheckBoxIcon sx={{ color: '#fff', fontSize: 18 }} />}
+                </Box>
               ))}
-            </Grid>
+            </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Button 
@@ -636,6 +809,66 @@ function CardDetailModal({ open, onClose, card, listName }) {
             </Box>
           </>
         )}
+      </Popover>
+
+      {/* Checklist Popover */}
+      <Popover
+        open={Boolean(checklistAnchorEl)}
+        anchorEl={checklistAnchorEl}
+        onClose={handleChecklistClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: { width: 300, p: 2 }
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, position: 'relative' }}>
+          <Typography variant="subtitle1" sx={{ flexGrow: 1, textAlign: 'center', fontWeight: 600 }}>
+            Add checklist
+          </Typography>
+          <IconButton size="small" onClick={handleChecklistClose} sx={{ position: 'absolute', right: -8, top: -8 }}>
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        </Box>
+
+        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block' }}>
+          Title
+        </Typography>
+        <TextField
+          fullWidth
+          size="small"
+          value={newChecklistTitle}
+          onChange={(e) => setNewChecklistTitle(e.target.value)}
+          sx={{ mb: 2 }}
+          autoFocus
+        />
+
+        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', mb: 0.5, display: 'block' }}>
+          Copy items from...
+        </Typography>
+        <TextField
+          select
+          fullWidth
+          size="small"
+          value="none"
+          SelectProps={{ native: true }}
+          sx={{ mb: 2 }}
+        >
+          <option value="none">(none)</option>
+        </TextField>
+
+        <Button 
+          variant="contained" 
+          onClick={handleCreateChecklist}
+        >
+          Add
+        </Button>
       </Popover>
 
     </Dialog>

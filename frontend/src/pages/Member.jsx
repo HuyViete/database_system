@@ -12,7 +12,11 @@ import {
   ListItemText,
   Chip,
   Paper,
-  IconButton
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions
 } from '@mui/material'
 import {
   PersonAdd as PersonAddIcon,
@@ -27,14 +31,17 @@ import { useWorkspaceStore } from '../stores/useWorkspaceStore'
 import { useAuthStore } from '../stores/useAuthStore'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
+import { toast } from 'sonner'
 
 dayjs.extend(relativeTime)
 
 function Member() {
   const { workspace, fetchWorkspace } = useBoardStore()
-  const { members, fetchMembers, loading } = useWorkspaceStore()
+  const { members, fetchMembers, inviteMember, loading } = useWorkspaceStore()
   const { user } = useAuthStore()
   const [filter, setFilter] = useState('')
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
 
   useEffect(() => {
     fetchWorkspace()
@@ -51,6 +58,18 @@ function Member() {
     member.last_name.toLowerCase().includes(filter.toLowerCase()) ||
     member.username.toLowerCase().includes(filter.toLowerCase())
   )
+
+  const handleInvite = async () => {
+    if (!inviteEmail) return
+    try {
+      await inviteMember(workspace.workspace_id, inviteEmail)
+      toast.success('Invitation sent successfully')
+      setInviteOpen(false)
+      setInviteEmail('')
+    } catch (error) {
+      toast.error('Failed to send invitation')
+    }
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.secondary' }}>
@@ -70,7 +89,7 @@ function Member() {
                 </Typography>
                 <Chip label={`${members.length} / 10`} size="small" sx={{ bgcolor: 'trello.createBoardBg', fontWeight: 'bold', color: 'text.primary' }} />
               </Box>
-              <Button variant="contained" startIcon={<PersonAddIcon />}>
+              <Button variant="contained" startIcon={<PersonAddIcon />} onClick={() => setInviteOpen(true)}>
                 Invite Workspace members
               </Button>
             </Box>
@@ -220,6 +239,28 @@ function Member() {
           </Box>
         </Box>
       </Box>
+
+      <Dialog open={inviteOpen} onClose={() => setInviteOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Invite to Workspace</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Email Address"
+            type="email"
+            fullWidth
+            variant="outlined"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setInviteOpen(false)}>Cancel</Button>
+          <Button onClick={handleInvite} variant="contained" disabled={!inviteEmail}>
+            Send Invitation
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

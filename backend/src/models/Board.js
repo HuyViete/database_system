@@ -69,18 +69,39 @@ export async function addBoardMember(transaction, boardId, memberId, role) {
         `);
 }
 
-export async function updateBoard(boardId, name, visibility, backgroundColor) {
-    const result = await pool.request()
-        .input('boardId', mssql.UniqueIdentifier, boardId)
-        .input('name', mssql.NVarChar, name)
-        .input('visibility', mssql.VarChar, visibility)
-        .input('backgroundColor', mssql.VarChar, backgroundColor)
-        .query(`
-            UPDATE Board
-            SET name = @name, visibility = @visibility, background_color = @backgroundColor, time_updated = GETDATE()
-            OUTPUT INSERTED.*
-            WHERE board_id = @boardId
-        `);
+export async function updateBoard(boardId, name, visibility, backgroundColor, backgroundImg) {
+    const updates = [];
+    const request = pool.request().input('boardId', mssql.UniqueIdentifier, boardId);
+
+    if (name !== undefined) {
+        request.input('name', mssql.NVarChar, name);
+        updates.push('name = @name');
+    }
+    if (visibility !== undefined) {
+        request.input('visibility', mssql.VarChar, visibility);
+        updates.push('visibility = @visibility');
+    }
+    if (backgroundColor !== undefined) {
+        request.input('backgroundColor', mssql.VarChar, backgroundColor);
+        updates.push('background_color = @backgroundColor');
+    }
+    if (backgroundImg !== undefined) {
+        request.input('backgroundImg', mssql.VarChar, backgroundImg);
+        updates.push('background_img = @backgroundImg');
+    }
+
+    if (updates.length === 0) return null;
+
+    updates.push('time_updated = GETDATE()');
+
+    const query = `
+        UPDATE Board
+        SET ${updates.join(', ')}
+        OUTPUT INSERTED.*
+        WHERE board_id = @boardId
+    `;
+
+    const result = await request.query(query);
     return result.recordset[0];
 }
 

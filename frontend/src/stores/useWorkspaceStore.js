@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { getWorkspaceMembers } from '../services/workspaceService'
+import axios from '../libs/axios'
 
 export const useWorkspaceStore = create((set) => ({
   members: [],
@@ -15,4 +16,13 @@ export const useWorkspaceStore = create((set) => ({
       set({ error: error.message, loading: false })
     }
   },
+
+  inviteMember: async (workspaceId, email) => {
+    try {
+      await axios.post(`/workspaces/${workspaceId}/invitations`, { email })
+    } catch (error) {
+      console.error('Failed to invite member:', error)
+      throw error
+    }
+  }
 }))

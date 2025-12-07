@@ -8,6 +8,9 @@ import listRoutes from "./routes/listRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
 import workspaceRoutes from "./routes/workspaceRoutes.js";
 import labelRoutes from "./routes/labelRoutes.js";
+import checklistRoutes from "./routes/checklistRoutes.js";
+import invitationRoutes from "./routes/invitationRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import cookieParser from 'cookie-parser';
 
 const app = express();
@@ -35,6 +38,9 @@ app.use('/api/lists', listRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/labels', labelRoutes);
+app.use('/api', checklistRoutes);
+app.use('/api', invitationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server runs at port ${PORT}`)
