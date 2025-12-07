@@ -297,7 +297,7 @@ CREATE TABLE Attachment (
     file_name NVARCHAR(255) NOT NULL,
     file_url VARCHAR(MAX) NOT NULL,
     file_size BIGINT,
-    file_type VARCHAR(50),
+    file_type VARCHAR(100),
     time_uploaded DATETIME2 DEFAULT GETDATE(),
     FOREIGN KEY (card_id) REFERENCES Card(card_id) ON DELETE CASCADE,
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
