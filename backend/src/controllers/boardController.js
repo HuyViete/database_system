@@ -145,7 +145,9 @@ export const getWorkspace = async (req, res) => {
                 workspace = await WorkspaceModel.getWorkspaceById(workspaceId);
                 res.json(workspace);
              } catch (err) {
-                 await transaction.rollback();
+                 if (transaction._aborted === false) {
+                    await transaction.rollback();
+                 }
                  console.error(`[getWorkspace] Failed to create default workspace:`, err);
                  throw err;
              }

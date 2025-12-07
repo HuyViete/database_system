@@ -119,6 +119,14 @@ function Dashboard() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
                 <LockIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>Private</Typography>
+                {workspace?.completion_percent !== undefined && (
+                  <>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', mx: 1 }}>•</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      Completion: {Number(workspace.completion_percent).toFixed(0)}%
+                    </Typography>
+                  </>
+                )}
               </Box>
             </Box>
           </Box>

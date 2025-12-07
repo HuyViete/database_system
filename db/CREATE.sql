@@ -452,7 +452,7 @@ GO
 
 -- Procedure: Get all members in a workspace
 CREATE PROCEDURE GetAllMembersInWorkspace
-    @workspace_id UNIQUEIDENTIFIER
+    @workspace_id VARCHAR(20)
 AS
 BEGIN
     SELECT m.member_id, m.login_email, m.status
@@ -467,7 +467,7 @@ GO
 -- Function: Calculate percent of completed checklist items in a workspace
 CREATE FUNCTION GetWorkspaceCompletionPercent
 (
-    @workspace_id UNIQUEIDENTIFIER
+    @workspace_id VARCHAR(20)
 )
 RETURNS FLOAT
 AS
@@ -498,7 +498,7 @@ BEGIN
     AND ci.is_completed = 1;
 
     IF @total = 0
-        RETURN 100.0;
+        RETURN 0.0;
     RETURN (CAST(@completed AS FLOAT) / @total) * 100.0;
 END
 GO
@@ -507,7 +507,7 @@ GO
 -- Function: Get overdue cards count in a workspace
 CREATE FUNCTION GetOverdueCardCountInWorkspace
 (
-    @workspace_id UNIQUEIDENTIFIER
+    @workspace_id VARCHAR(20)
 )
 RETURNS INT
 AS

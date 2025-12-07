@@ -5,7 +5,7 @@ export async function getWorkspaceByMemberId(userId) {
     const result = await pool.request()
         .input('userId', mssql.VarChar, userId)
         .query(`
-            SELECT TOP 1 w.* 
+            SELECT TOP 1 w.*, dbo.GetWorkspaceCompletionPercent(w.workspace_id) as completion_percent
             FROM Workspace w
             JOIN Workspace_Member wm ON w.workspace_id = wm.workspace_id
             WHERE wm.member_id = @userId
@@ -41,7 +41,7 @@ export async function addWorkspaceMember(transaction, workspaceId, memberId, rol
 export async function getWorkspaceById(workspaceId) {
     const result = await pool.request()
         .input('workspaceId', mssql.VarChar, workspaceId)
-        .query('SELECT * FROM Workspace WHERE workspace_id = @workspaceId');
+        .query('SELECT w.*, dbo.GetWorkspaceCompletionPercent(w.workspace_id) as completion_percent FROM Workspace w WHERE workspace_id = @workspaceId');
     return result.recordset[0];
 }
 
