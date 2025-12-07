@@ -122,7 +122,7 @@ SELECT @CardId = card_id FROM Card WHERE card_id_num = @CardIdNum;
 PRINT 'Card created: ' + @CardId;
 
 -- 6. Insert Comment
-INSERT INTO Comment (card_id, user_id, content)
+INSERT INTO Comment (card_id, member_id, text)
 VALUES (@CardId, @User2Id, 'Looking good, keep it up!');
 
 PRINT 'Sample data insertion complete.';
