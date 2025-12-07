@@ -460,9 +460,9 @@ BEGIN
     SELECT w.workspace_id, w.name, COUNT(wm.member_id) AS member_count
     FROM Workspace w
     JOIN Workspace_Member wm ON w.workspace_id = wm.workspace_id
-    GROUP BY w.workspace_id
-    ORDER BY member_count DESC
-    HAVING member_count > @min_count;
+    GROUP BY w.workspace_id, w.name
+    HAVING COUNT(wm.member_id) > @min_count
+    ORDER BY member_count DESC;
 END
 GO
 
