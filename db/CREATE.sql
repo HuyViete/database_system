@@ -70,7 +70,7 @@ CREATE TABLE Member (
     login_email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     last_login DATETIME2,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('invited', 'active', 'suspended')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('inactive', 'active', 'suspended')),
     FOREIGN KEY (member_id) REFERENCES [User](user_id) ON DELETE CASCADE
 );
 GO
