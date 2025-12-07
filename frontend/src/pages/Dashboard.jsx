@@ -113,20 +113,44 @@ function Dashboard() {
                     >
                       <EditIcon fontSize="small" />
                     </IconButton>
+
+                    {/* Completion Badge */}
+                    {workspace?.completion_percent !== undefined && (
+                      <Box sx={{ 
+                        ml: 2, 
+                        px: 1, 
+                        py: 0.5, 
+                        bgcolor: 'primary.main', 
+                        color: 'white', 
+                        borderRadius: 1,
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {Number(workspace.completion_percent).toFixed(0)}% Completed
+                      </Box>
+                    )}
+
+                    {/* Overdue Badge */}
+                    {workspace?.overdue_count !== undefined && (
+                      <Box sx={{ 
+                        ml: 1, 
+                        px: 1, 
+                        py: 0.5, 
+                        bgcolor: 'error.main', 
+                        color: 'white', 
+                        borderRadius: 1,
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold'
+                      }}>
+                        {workspace.overdue_count} Overdue
+                      </Box>
+                    )}
                   </>
                 )}
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
                 <LockIcon sx={{ fontSize: 14, color: 'text.secondary' }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>Private</Typography>
-                {workspace?.completion_percent !== undefined && (
-                  <>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', mx: 1 }}>•</Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                      Completion: {Number(workspace.completion_percent).toFixed(0)}%
-                    </Typography>
-                  </>
-                )}
               </Box>
             </Box>
           </Box>

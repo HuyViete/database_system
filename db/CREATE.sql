@@ -383,6 +383,23 @@ CREATE TABLE Notification (
 );
 GO
 
+CREATE TABLE Invitation (
+    invitation_id_num INT IDENTITY(1,1),
+    invitation_id AS CAST('INV' + RIGHT('0000' + CAST(invitation_id_num AS VARCHAR(10)), 4) AS VARCHAR(20)) PERSISTED PRIMARY KEY,
+    inviter_id VARCHAR(20) NOT NULL,
+    email_target VARCHAR(255) NOT NULL,
+    workspace_id VARCHAR(20) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    token VARCHAR(255) NOT NULL,
+    time_created DATETIME2 DEFAULT GETDATE(),
+    time_expired DATETIME2 DEFAULT DATEADD(day, 7, GETDATE()),
+    FOREIGN KEY (inviter_id) REFERENCES Member(member_id),
+    FOREIGN KEY (workspace_id) REFERENCES Workspace(workspace_id) ON DELETE CASCADE,
+    CHECK (time_created <= time_expired)
+);
+GO
+GO
+
 
 
 -- Trigger: Set time_expired to 7 days from now on insert or update
